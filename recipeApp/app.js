@@ -3,6 +3,7 @@ const recipeForm = document.querySelector('#recipe-form');
 const recipeContainer = document.querySelector('#recipe-container');
 let listItems = [];
 
+
 // FUNCTIONS
 function handleFormSubmit(e){
   e.preventDefault(); // the "form" default behavior is to refresh the page. here we are saying to it - NOT!
