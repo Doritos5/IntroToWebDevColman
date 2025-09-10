@@ -1,0 +1,133 @@
+
+
+body.login-page{
+    /*font-family: "Heebo", system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";*/
+    /*background-color:#000;*/
+    color:#fff;
+}
+.bg-hero{
+    position:fixed;
+    inset:0;
+    background-image:
+            linear-gradient(rgba(0,0,0,.65), rgba(0,0,0,.65)),
+            url("./login_background.jpeg");
+
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    filter:saturate(1.1) contrast(1.05);
+    z-index:-1;
+}
+
+
+/* Netflix wordmark (simple text version) */
+.brand{
+    position:fixed;
+    top:18px;
+    left:24px;
+    font-weight:900;
+    letter-spacing:.05em;
+    font-size:32px;
+    color: red;
+
+    /* So we can't select the text with the mouse, it acts like an image */
+    user-select:none;
+}
+
+.login-card{
+    /*width:100%;*/
+    max-width: 440px;
+    background: rgba(0,0,0,.75);
+    border-radius: 8px;
+    padding: 40px 55px 36px;
+}
+
+.form-control{
+    background-color: #333333FF;
+    border: 1px solid #444;
+    color: #fff;
+}
+.form-control::placeholder{ color:#8c8c8c;
+    }
+.form-control:focus{
+    /*background-color: #333;*/
+    color:#fff;
+    border-color:#777;
+    box-shadow:none;
+}
+
+.btn-netflix{
+    background-color: red;
+    border:none;
+    color:#fff;
+    font-weight:700;
+}
+.btn-netflix:hover{ background-color:#bf0810;
+    }
+
+a.link-muted{
+    color: #b3b3b3;
+    text-decoration:none;
+    }
+a.link-muted:hover{ text-decoration:underline;
+    }
+
+.divider{ height:1px;
+    background:#2f2f2f;
+    margin: 16px 0 8px;
+    }
+
+.tiny{ font-size:.85rem;
+    color: #b3b3b3;
+    }
+
+/* Make the center block align similarly to Netflix */
+.page-wrap{
+    min-height:100%;
+    display:grid;
+    place-items:center;
+    padding: 80px 16px;
+    }
+
+.btn-dark.btn-lg{
+    background:#272727;
+    border-color:#3a3a3a;
+}
+
+.container.d-flex{
+    color:#9a9a9a;
+}
+
+/* ------------------------- NavBar page ------------------------- */
+
+body.navbar-page {
+    margin: 0;
+    background-color: #000;
+    color: #fff;
+}
+.navbar {
+    background: url("./secondBackround.jpg") no-repeat center center;
+    background-size: cover;
+}
+.navbar-brand {
+    font-weight: 900;
+    color: #e50914 !important;
+    font-size: 1.5rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+.nav-link {
+    color: #fff !important;
+    margin-right: 1rem;
+}
+.nav-link:hover {
+    text-decoration: underline;
+}
+.icon-btn {
+    margin-left: 1rem;
+    cursor: pointer;
+}
+.user-avatar {
+    width: 28px;
+    height: 28px;
+}
