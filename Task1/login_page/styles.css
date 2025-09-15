@@ -1,8 +1,6 @@
 
 
 body.login-page{
-    /*font-family: "Heebo", system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";*/
-    /*background-color:#000;*/
     color:#fff;
 }
 .bg-hero{
@@ -10,7 +8,7 @@ body.login-page{
     inset:0;
     background-image:
             linear-gradient(rgba(0,0,0,.65), rgba(0,0,0,.65)),
-            url("./login_background.jpeg");
+            url("login_background.jpeg");
 
     background-size:cover;
     background-position:center;
@@ -20,7 +18,6 @@ body.login-page{
 }
 
 
-/* Netflix wordmark (simple text version) */
 .brand{
     position:fixed;
     top:18px;
@@ -47,22 +44,26 @@ body.login-page{
     border: 1px solid #444;
     color: #fff;
 }
-.form-control::placeholder{ color:#8c8c8c;
+.form-control::placeholder{
+    color:#8c8c8c;
     }
-.form-control:focus{
-    /*background-color: #333;*/
-    color:#fff;
-    border-color:#777;
-    box-shadow:none;
+
+/* Comment: this is the login text boxes, it means whn i click on textbox the background will be darker
+also, text color will be white, and the border of the textbox when i click on it will be gray and not blue */
+.form-control:focus {
+    background-color: #222;   /* darker when focused */
+    color: #fff;              /* keep text white */
+    border-color: #777;
+    box-shadow: none;         /* remove glow if you want */
 }
 
-.btn-netflix{
+.login-btn{
     background-color: red;
     border:none;
     color:#fff;
     font-weight:700;
 }
-.btn-netflix:hover{ background-color:#bf0810;
+.login-btn:hover{ background-color:#bf0810;
     }
 
 a.link-muted{
@@ -96,38 +97,4 @@ a.link-muted:hover{ text-decoration:underline;
 
 .container.d-flex{
     color:#9a9a9a;
-}
-
-/* ------------------------- NavBar page ------------------------- */
-
-body.navbar-page {
-    margin: 0;
-    background-color: #000;
-    color: #fff;
-}
-.navbar {
-    background: url("./secondBackround.jpg") no-repeat center center;
-    background-size: cover;
-}
-.navbar-brand {
-    font-weight: 900;
-    color: #e50914 !important;
-    font-size: 1.5rem;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-.nav-link {
-    color: #fff !important;
-    margin-right: 1rem;
-}
-.nav-link:hover {
-    text-decoration: underline;
-}
-.icon-btn {
-    margin-left: 1rem;
-    cursor: pointer;
-}
-.user-avatar {
-    width: 28px;
-    height: 28px;
 }
