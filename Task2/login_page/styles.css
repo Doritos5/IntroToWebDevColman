@@ -6,7 +6,7 @@ body.login-page{
     inset:0;
     background-image:
             linear-gradient(rgba(0,0,0,.65), rgba(0,0,0,.65)),
-            url("login_background.jpeg");
+            url("../images/login_background.jpeg");
 
     background-size:cover;
     background-position:center;
