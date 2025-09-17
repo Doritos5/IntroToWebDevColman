@@ -8,12 +8,13 @@ body.login-page{
     inset:0;
     background-image:
             linear-gradient(rgba(0,0,0,.65), rgba(0,0,0,.65)),
-            url("../images/login_background.jpeg");
+            url("login_background.jpeg");
 
     background-size:cover;
     background-position:center;
     background-repeat:no-repeat;
-    z-index:-1; /* This mean the background will be behind other elements in the page*/
+    filter:saturate(1.1) contrast(1.05);
+    z-index:-1;
 }
 
 
@@ -53,7 +54,7 @@ also, text color will be white, and the border of the textbox when i click on it
     background-color: #222;   /* darker when focused */
     color: #fff;              /* keep text white */
     border-color: #777;
-    box-shadow: none;         /* remove glow */
+    box-shadow: none;         /* remove glow if you want */
 }
 
 .login-btn{

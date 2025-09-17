@@ -7,7 +7,7 @@ body.navbar-page {
     color: #fff;
 }
 .navbar {
-    background: url("../images/secondBackround.jpg") no-repeat center center;
+    background: url("./secondBackround.jpg") no-repeat center center;
     background-size: cover;
 }
 .navbar-brand {
