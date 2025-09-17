@@ -86,3 +86,10 @@ main {
     100% { opacity: 1; transform: scale(0.8); }
 }
 
+.greeting-banner{
+    position:relative;z-index:1020;background:rgba(0,0,0,.6);
+    color:#fff;padding:.75rem 1rem;font-weight:600;
+    border-bottom:1px solid rgba(255,255,255,.15);margin-top:56px;
+}
+
+

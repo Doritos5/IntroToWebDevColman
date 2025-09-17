@@ -147,3 +147,25 @@ searchBoxInput.addEventListener("input", e => {
     const query = e.target.value.toLowerCase();
     renderFeed(item => item.title.includes(query));
 });
+
+document.addEventListener('DOMContentLoaded',()=>{
+    let u=null; try{u=localStorage.getItem('selectedProfile')}catch{}
+    if(!u){location.replace('../profile_page/profilePage.html');return;}
+    const b=document.createElement('div');
+    b.className='greeting-banner';
+    b.textContent=`Hello "${u}"`;
+    const nav=document.querySelector('nav.navbar');
+    if(nav) nav.insertAdjacentElement('afterend',b); else document.body.prepend(b);
+});
+
+const signOut = document.getElementById('signOutLink')
+    || Array.from(document.querySelectorAll('.dropdown-menu a'))
+        .find(a => a.textContent.trim().toLowerCase() === 'sign out');
+
+if (signOut) {
+    signOut.addEventListener('click', (e) => {
+        e.preventDefault();
+        try { localStorage.removeItem('selectedProfile'); } catch {}
+        window.location.href = '../profile_page/profilePage.html';
+    });
+}
