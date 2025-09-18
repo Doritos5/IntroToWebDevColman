@@ -142,7 +142,6 @@ h1{
     cursor:default;
 }
 
-/* במצב עריכה (אחרי לחיצה על העיפרון) */
 .edit-check:checked ~ .profile-name-input{
     pointer-events:auto;
     caret-color:auto;
