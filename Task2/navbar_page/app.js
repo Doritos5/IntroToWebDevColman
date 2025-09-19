@@ -53,7 +53,6 @@ function renderFeed(filterFunc = null){
     const cachedFeedItems = getFeedPageData(true);
 
     if (filterFunc){
-        console.log(filterFunc);
         const feedCatalog = cachedFeedItems.filter(filterFunc);
         feed.innerHTML = feedCatalog.map(cardHTML).join('');
         return;
@@ -114,18 +113,14 @@ feed.addEventListener('click', (e) => {
     // "closest:" -> When I click on the "feed" area,
     // it looks for the first ancestor (including itself) that matches the selector.
     const btn = e.target.closest('.btn-outline-light');
-    // console.log(btn);
 
     // Nothing found
     if(!btn) return;
-
-    // console.log("found!")
 
     const itemId = Number(btn.getAttribute('value'));
 
     const hardCodedCatalogItem = catalog.find(x => x.id === itemId);
     hardCodedCatalogItem.likes += 1;
-    console.log(hardCodedCatalogItem.likes);
     saveItemsToLocalStorage();
 
     const likesSpan = document.querySelector(`[data-likes="${itemId}"]`);
@@ -145,7 +140,7 @@ searchIcon.addEventListener('click', () => {
 
 searchBoxInput.addEventListener("input", e => {
     const query = e.target.value.toLowerCase();
-    renderFeed(item => item.title.includes(query));
+    renderFeed(item => item.title.toLowerCase().includes(query.trim().toLowerCase()));
 });
 
 document.addEventListener('DOMContentLoaded',()=>{
