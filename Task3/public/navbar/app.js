@@ -148,7 +148,7 @@ searchBoxInput.addEventListener("input", e => {
 
 document.addEventListener('DOMContentLoaded',()=>{
     let u=null; try{u=localStorage.getItem('selectedProfile')}catch{}
-    if(!u){location.replace('../profile_page/profilePage.html');return;}
+    if(!u){location.replace('../profile/profilePage.html');return;}
     const b=document.createElement('div');
     b.className='greeting-banner';
     b.textContent=`Hello "${u}"`;
@@ -164,6 +164,6 @@ if (signOut) {
     signOut.addEventListener('click', (e) => {
         e.preventDefault();
         try { localStorage.removeItem('selectedProfile'); } catch {}
-        window.location.href = '../profile_page/profilePage.html';
+        window.location.href = '../profile/profilePage.html';
     });
 }

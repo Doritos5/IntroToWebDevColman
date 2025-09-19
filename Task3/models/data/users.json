@@ -1,0 +1,17 @@
+{
+  "users": [
+    {
+      "id": "user1",
+      "email": "d@d.com",
+      "username": "Paul",
+      "password": "123456",
+      "profiles": [
+        { "id": "paul", "displayName": "Paul", "avatar": "/images/netflix_profile.jpg" },
+        { "id": "alon", "displayName": "Alon", "avatar": "/images/netflix_profile.jpg" },
+        { "id": "ronni", "displayName": "Ronni", "avatar": "/images/netflix_profile.jpg" },
+        { "id": "anna", "displayName": "Anna", "avatar": "/images/netflix_profile.jpg" },
+        { "id": "noa", "displayName": "Noa", "avatar": "/images/netflix_profile.jpg" }
+      ]
+    }
+  ]
+}
