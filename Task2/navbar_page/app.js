@@ -52,12 +52,15 @@ function getFeedPageData(parse = false){
 function renderFeed(filterFunc = null){
     const cachedFeedItems = getFeedPageData(true);
 
-    if (filterFunc){
-        const feedCatalog = cachedFeedItems.filter(filterFunc);
-        feed.innerHTML = feedCatalog.map(cardHTML).join('');
-        return;
-    }
-    feed.innerHTML = cachedFeedItems.map(cardHTML).join('');
+    let feedCatalog = filterFunc
+        ? cachedFeedItems.filter(filterFunc)
+        : cachedFeedItems;
+
+    feedCatalog = feedCatalog.slice().sort((a, b) =>
+        a.title.localeCompare(b.title)
+    );
+
+    feed.innerHTML = feedCatalog.map(cardHTML).join('');
 }
 
 function saveItemsToLocalStorage(){
