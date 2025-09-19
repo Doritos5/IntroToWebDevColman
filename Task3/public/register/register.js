@@ -1,3 +1,4 @@
+
 const registerForm = document.getElementById('register-form');
 const emailInput = document.getElementById('register-email');
 const usernameInput = document.getElementById('register-username');
@@ -19,7 +20,7 @@ function toggleMessage(element, message) {
 }
 
 function isValidEmail(email) {
-    const pattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    const pattern = /^[a-zA-Z0-9._]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+$/;
     return pattern.test(email);
 }
 
@@ -28,17 +29,18 @@ function isValidUsername(username) {
 }
 
 function isValidPassword(password) {
-    return password.length >= 3;
+    return password.length >= 6;
 }
 
 async function registerUser(email, username, password) {
-    const response = await fetch('/api/auth/register', {
+    const response = await fetch('/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, username, password })
     });
 
     const payload = await response.json();
+    debugger
     if (!response.ok) {
         throw new Error(payload.message || 'Unable to register.');
     }
@@ -56,37 +58,37 @@ registerForm.addEventListener('submit', async (event) => {
 
     let valid = true;
     if (!isValidEmail(email)) {
-        toggleMessage(emailError, 'Please enter a valid email address.');
+        toggleMessage(emailError, 'Email must be at least 3 characters and contain only english letters/numbers.');
         valid = false;
     } else {
         toggleMessage(emailError, '');
     }
 
     if (!isValidUsername(username)) {
-        toggleMessage(usernameError, 'Username must be at least 3 characters and contain only letters, numbers, spaces or underscores.');
+        toggleMessage(usernameError, 'Username must be at least 3 characters and contain only letters and numbers');
         valid = false;
     } else {
         toggleMessage(usernameError, '');
     }
 
     if (!isValidPassword(password)) {
-        toggleMessage(passwordError, 'Password must be at least 3 characters.');
+        toggleMessage(passwordError, 'Password must be at least 6 characters.');
         valid = false;
     } else {
         toggleMessage(passwordError, '');
     }
 
     if (!valid) {
+        console.log("not valud")
         return;
     }
-
+    console.log("valid")
     try {
         await registerUser(email, username, password);
         toggleMessage(successMessage, 'Registration successful! Redirecting to login...');
-        console.log('Registration successful via AJAX for', email);
         setTimeout(() => {
-            window.location.href = '../login/loginPage.html';
-        }, 1200);
+            window.location.href = '/';
+        }, 3000);
     } catch (error) {
         console.error('Registration failed:', error);
         toggleMessage(serverError, error.message);

@@ -3,7 +3,7 @@ const express = require('express');
 
 const authRoutes = require('./routes/authRoutes');
 // const userRoutes = require('./routes/userRoutes');
-// const catalogRoutes = require('./routes/catalogRoutes');
+const catalogRoutes = require('./routes/catalogRoutes');
 const { logger } = require("./middleware/logger");
 
 const app = express();
@@ -24,8 +24,7 @@ app.set("view engine", "ejs");
 
 app.use('/', authRoutes);
 // app.use('/users', userRoutes);
-// app.use('/catalog', catalogRoutes);
-
+app.use('/catalog', catalogRoutes);
 // app.use("/home", homeViewRouter);
 // app.use("/books", bookViewRouter);
 // app.use("/api/books", apiBookRouter);

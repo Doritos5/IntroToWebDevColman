@@ -6,11 +6,57 @@
       "username": "Paul",
       "password": "123456",
       "profiles": [
-        { "id": "paul", "displayName": "Paul", "avatar": "/images/netflix_profile.jpg" },
-        { "id": "alon", "displayName": "Alon", "avatar": "/images/netflix_profile.jpg" },
-        { "id": "ronni", "displayName": "Ronni", "avatar": "/images/netflix_profile.jpg" },
-        { "id": "anna", "displayName": "Anna", "avatar": "/images/netflix_profile.jpg" },
-        { "id": "noa", "displayName": "Noa", "avatar": "/images/netflix_profile.jpg" }
+        {
+          "id": "paul",
+          "displayName": "Paul",
+          "avatar": "/images/netflix_profile.jpg"
+        },
+        {
+          "id": "alon",
+          "displayName": "Alon",
+          "avatar": "/images/netflix_profile.jpg"
+        },
+        {
+          "id": "ronni",
+          "displayName": "Ronni",
+          "avatar": "/images/netflix_profile.jpg"
+        },
+        {
+          "id": "anna",
+          "displayName": "Anna",
+          "avatar": "/images/netflix_profile.jpg"
+        },
+        {
+          "id": "noa",
+          "displayName": "Noa",
+          "avatar": "/images/netflix_profile.jpg"
+        }
+      ]
+    },
+    {
+      "id": "2cea2d8c-f549-4c30-ba6f-9ae96457c94b",
+      "email": "asdas@asd.com",
+      "username": "sadasd",
+      "password": "sadasd",
+      "profiles": [
+        {
+          "id": "profile-1758300162205",
+          "displayName": "sadasd",
+          "avatar": "/images/netflix_profile.jpg"
+        }
+      ]
+    },
+    {
+      "id": "2c6f69c8-0cb4-4230-936e-e44d64bc4ac0",
+      "email": "dd@d.com",
+      "username": "asdasd",
+      "password": "123456",
+      "profiles": [
+        {
+          "id": "profile-1758301081768",
+          "displayName": "asdasd",
+          "avatar": "/images/netflix_profile.jpg"
+        }
       ]
     }
   ]

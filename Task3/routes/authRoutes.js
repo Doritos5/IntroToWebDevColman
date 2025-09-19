@@ -4,15 +4,17 @@ const {
     logout,
     register,
 } = require('../controllers/authController');
-const path = require("path");
 const router = express.Router();
-const publicPath = path.join(__dirname, '..', 'public');
 
 router.get('/', (_req, res) => {
-    res.sendFile(path.join(publicPath, 'login', 'loginPage.html'));
+    res.render("login");
 });
+
 router.post('/login', login);
 router.post('/logout', logout);
+router.get('/register', (_req, res) => {
+    res.render("register");
+});
 router.post('/register', register);
 
 module.exports = router;
