@@ -1,7 +1,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 
-const CATALOG_PATH = path.join(__dirname, '..', '..', 'data', 'catalog.json');
+const CATALOG_PATH = path.join(__dirname, 'data', 'catalog.json');
 
 async function readCatalogFile() {
     try {

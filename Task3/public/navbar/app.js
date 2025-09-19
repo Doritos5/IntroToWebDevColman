@@ -1,21 +1,10 @@
 
 const feed = document.getElementById('feed');
 const searchIcon = document.querySelector('.bi-search');
-    const searchBoxInput = document.getElementById('searchInput');
+const searchBoxInput = document.getElementById('searchInput');
 
-let catalog = [
-    { id: 1,  title: 'The Silent Code', year: 2024, genres: ['Thriller','Sci‑Fi'], likes: 128, poster: 'https://picsum.photos/seed/silentcode/600/338' },
-    { id: 2,  title: 'Sunset Alley',   year: 2022, genres: ['Drama'],        likes: 92,  poster: 'https://picsum.photos/seed/sunset/600/338' },
-    { id: 3,  title: 'Quantum Heist',  year: 2023, genres: ['Action','Sci‑Fi'], likes: 301, poster: 'https://picsum.photos/seed/quantum/600/338' },
-    { id: 4,  title: 'Cedar Falls',    year: 2021, genres: ['Mystery'],      likes: 77,  poster: 'https://picsum.photos/seed/cedar/600/338' },
-    { id: 5,  title: 'Pixel Hearts',   year: 2020, genres: ['Romance','Comedy'], likes: 211, poster: 'https://picsum.photos/seed/pixel/600/338' },
-    { id: 6,  title: 'Desert Line',    year: 2019, genres: ['Adventure'],    likes: 64,  poster: 'https://picsum.photos/seed/desert/600/338' },
-    { id: 7,  title: 'Nordic Lights',  year: 2024, genres: ['Documentary'],  likes: 18,  poster: 'https://picsum.photos/seed/nordic/600/338' },
-    { id: 8,  title: 'Crimson Tide',   year: 2018, genres: ['Action'],       likes: 154, poster: 'https://picsum.photos/seed/crimson/600/338' },
-    { id: 9,  title: 'Byte Me',        year: 2023, genres: ['Comedy'],       likes: 87,  poster: 'https://picsum.photos/seed/byte/600/338' },
-    { id: 10, title: 'Echoes',         year: 2022, genres: ['Drama','Mystery'], likes: 190, poster: 'https://picsum.photos/seed/echoes/600/338' },
-];
-
+const initialCatalog = Array.isArray(window.__CATALOG__) ? window.__CATALOG__ : [];
+let catalog = initialCatalog.map(item => ({ ...item }));
 
 function cardHTML(item){
     const itemLikes = item.likes;
@@ -42,23 +31,23 @@ function cardHTML(item){
       </div>`;
 }
 
-function getFeedPageData(parse = false){
-    const data = localStorage.getItem('feedPage.list');
-    if (parse) return JSON.parse(data);
-
-    return data;
+function getFeedPageData(){
+    try {
+        const data = localStorage.getItem('feedPage.list');
+        if (!data) return null;
+        return JSON.parse(data);
+    } catch (_error) {
+        return null;
+    }
 }
 
 function renderFeed(filterFunc = null){
-    const cachedFeedItems = getFeedPageData(true);
+    let feedCatalog = Array.isArray(catalog) ? [...catalog] : [];
 
-    let feedCatalog = filterFunc
-        ? cachedFeedItems.filter(filterFunc)
-        : cachedFeedItems;
-
-    feedCatalog = feedCatalog.slice().sort((a, b) =>
-        a.title.localeCompare(b.title)
-    );
+    if (typeof filterFunc === 'function') {
+        feedCatalog = feedCatalog.filter(filterFunc);
+    }
+    feedCatalog.sort((a, b) => a.title.localeCompare(b.title));
 
     feed.innerHTML = feedCatalog.map(cardHTML).join('');
 }
@@ -68,12 +57,12 @@ function saveItemsToLocalStorage(){
 }
 
 function feedToLocalStorage(){
-    const tempLocalStorage = getFeedPageData();
-    if(tempLocalStorage === null || tempLocalStorage === []) {
+    const storedItems = getFeedPageData();
+    if(!Array.isArray(storedItems) || storedItems.length === 0) {
         saveItemsToLocalStorage();
         return;
     }
-    catalog = getFeedPageData(true);
+    catalog = storedItems.map(item => ({ ...item }));
 }
 
 function popHeart(btn){

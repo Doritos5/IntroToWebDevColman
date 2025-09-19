@@ -21,9 +21,10 @@ const cookieParser = require("cookie-parser");
 app.use(cookieParser());
 app.use(logger);
 app.set("view engine", "ejs");
+app.set('views', path.join(__dirname, 'views'));
+
 
 app.use('/', authRoutes);
-// app.use('/users', userRoutes);
 app.use('/catalog', catalogRoutes);
 // app.use("/home", homeViewRouter);
 // app.use("/books", bookViewRouter);

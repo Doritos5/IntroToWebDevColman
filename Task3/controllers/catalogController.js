@@ -1,12 +1,16 @@
-const {
-    getCatalog
-} = require("../models/catalogModel")
+const { getCatalog } = require('../models/catalogModel');
 
-const render = (req, res) => {
-    console.log(getCatalog())
-    res.render("catalog", getCatalog() );
-};
+async function renderCatalogPage(_req, res, next) {
+    try {
+        const catalog = await getCatalog();
+        res.render('catalog', {
+            catalog,
+        });
+    } catch (error) {
+        next(error);
+    }
+}
 
 module.exports = {
-    render
-}
+    renderCatalogPage,
+};

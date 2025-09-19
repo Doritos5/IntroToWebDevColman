@@ -1,15 +1,8 @@
 const express = require('express');
-const {
-    login,
-    logout,
-    register,
-} = require('../controllers/authController');
+const { renderCatalogPage } = require('../controllers/catalogController');
+
 const router = express.Router();
 
-
-router.get('/', (_req, res) => {
-    res.render("catalog");
-});
+router.get('/', renderCatalogPage);
 
 module.exports = router;
-
