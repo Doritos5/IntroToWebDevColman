@@ -14,7 +14,7 @@
     Download the script right away (in parallel with HTML parsing).
     But don’t execute it until the HTML document is fully parsed.
     -->
-    <script defer src="/login/script.js"></script>
+    <script defer src="/login/login.js"></script>
 </head>
 
 <body class="login-page">
@@ -26,13 +26,13 @@
     <section class="login-card">
         <h1 class="mb-4 fw-bold">Account login</h1>
 
-<!--        <form id="login-form" novalidate action="/login" method="POST">-->
+        <!--        <form id="login-form" novalidate action="/login" method="POST">-->
         <form id="login-form" novalidate>
             <div class="mb-3">
                 <label for="email" class="form-label">Email</label>
                 <input type="email" class="form-control" id="email" placeholder="name@example.com" />
-                <small id="usernameError" class="text-danger d-none"> <!-- Bootstrap class for red text, hidden by default. -->
-                    Username must be at least 3 characters and contain only english letters/numbers.
+                <small id="emailError" class="text-danger d-none"> <!-- Bootstrap class for red text, hidden by default. -->
+                    Email must be at least 3 characters and contain only english letters/numbers.
                 </small>
             </div>
             <div class="mb-2">
@@ -49,7 +49,8 @@
                     <label class="form-check-label tiny" for="remember">Remember me</label>
                 </div>
             </div>
-            <small id="serverError" class="text-danger d-none"></small>
+            <div id="registerServerError" class="alert alert-danger d-none mt-3" role="alert"></div>
+            <div id="registerSuccess" class="alert alert-success d-none mt-3" role="alert"></div>
 
             <div class="d-grid gap-2 mt-4">
                 <button type="submit" class="btn login-btn btn-lg">Login</button>

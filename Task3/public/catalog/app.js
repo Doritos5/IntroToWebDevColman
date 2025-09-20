@@ -1,21 +1,12 @@
 
 const feed = document.getElementById('feed');
 const searchIcon = document.querySelector('.bi-search');
-    const searchBoxInput = document.getElementById('searchInput');
+const searchBoxInput = document.getElementById('searchInput');
+const xhr = new XMLHttpRequest();
 
-let catalog = [
-    { id: 1,  title: 'The Silent Code', year: 2024, genres: ['Thriller','Sci‑Fi'], likes: 128, poster: 'https://picsum.photos/seed/silentcode/600/338' },
-    { id: 2,  title: 'Sunset Alley',   year: 2022, genres: ['Drama'],        likes: 92,  poster: 'https://picsum.photos/seed/sunset/600/338' },
-    { id: 3,  title: 'Quantum Heist',  year: 2023, genres: ['Action','Sci‑Fi'], likes: 301, poster: 'https://picsum.photos/seed/quantum/600/338' },
-    { id: 4,  title: 'Cedar Falls',    year: 2021, genres: ['Mystery'],      likes: 77,  poster: 'https://picsum.photos/seed/cedar/600/338' },
-    { id: 5,  title: 'Pixel Hearts',   year: 2020, genres: ['Romance','Comedy'], likes: 211, poster: 'https://picsum.photos/seed/pixel/600/338' },
-    { id: 6,  title: 'Desert Line',    year: 2019, genres: ['Adventure'],    likes: 64,  poster: 'https://picsum.photos/seed/desert/600/338' },
-    { id: 7,  title: 'Nordic Lights',  year: 2024, genres: ['Documentary'],  likes: 18,  poster: 'https://picsum.photos/seed/nordic/600/338' },
-    { id: 8,  title: 'Crimson Tide',   year: 2018, genres: ['Action'],       likes: 154, poster: 'https://picsum.photos/seed/crimson/600/338' },
-    { id: 9,  title: 'Byte Me',        year: 2023, genres: ['Comedy'],       likes: 87,  poster: 'https://picsum.photos/seed/byte/600/338' },
-    { id: 10, title: 'Echoes',         year: 2022, genres: ['Drama','Mystery'], likes: 190, poster: 'https://picsum.photos/seed/echoes/600/338' },
-];
 
+const initialCatalog = Array.isArray(window.__CATALOG__) ? window.__CATALOG__ : [];
+let catalog = initialCatalog.map(item => ({ ...item }));
 
 function cardHTML(item){
     const itemLikes = item.likes;
@@ -42,39 +33,18 @@ function cardHTML(item){
       </div>`;
 }
 
-function getFeedPageData(parse = false){
-    const data = localStorage.getItem('feedPage.list');
-    if (parse) return JSON.parse(data);
-
-    return data;
-}
 
 function renderFeed(filterFunc = null){
-    const cachedFeedItems = getFeedPageData(true);
+    let feedCatalog = Array.isArray(catalog) ? [...catalog] : [];
 
-    let feedCatalog = filterFunc
-        ? cachedFeedItems.filter(filterFunc)
-        : cachedFeedItems;
-
-    feedCatalog = feedCatalog.slice().sort((a, b) =>
-        a.title.localeCompare(b.title)
-    );
-
+    if (typeof filterFunc === 'function') {
+        feedCatalog = feedCatalog.filter(filterFunc);
+    }
+    feedCatalog.sort((a, b) => a.title.localeCompare(b.title));
+    console.log("done!")
     feed.innerHTML = feedCatalog.map(cardHTML).join('');
 }
 
-function saveItemsToLocalStorage(){
-    localStorage.setItem('feedPage.list', JSON.stringify(catalog));
-}
-
-function feedToLocalStorage(){
-    const tempLocalStorage = getFeedPageData();
-    if(tempLocalStorage === null || tempLocalStorage === []) {
-        saveItemsToLocalStorage();
-        return;
-    }
-    catalog = getFeedPageData(true);
-}
 
 function popHeart(btn){
     // Create a heart
@@ -100,12 +70,6 @@ function rainbow(btn){
         btn.classList.remove('rainbow-once');
     }, { once: true });
 }
-// ------------------------- Listeners -------------------------
-document.addEventListener('DOMContentLoaded', () => {
-    feedToLocalStorage();
-    renderFeed();
-
-});
 
 // Scrolls up when the page finishes loading
 window.addEventListener("load", () => {
@@ -116,19 +80,25 @@ feed.addEventListener('click', (e) => {
     // "closest:" -> When I click on the "feed" area,
     // it looks for the first ancestor (including itself) that matches the selector.
     const btn = e.target.closest('.btn-outline-light');
-
+    console.log("111111")
     // Nothing found
     if(!btn) return;
-
+    console.log("222222")
     const itemId = Number(btn.getAttribute('value'));
+    console.log(itemId)
 
-    const hardCodedCatalogItem = catalog.find(x => x.id === itemId);
-    hardCodedCatalogItem.likes += 1;
-    saveItemsToLocalStorage();
+    // const hardCodedCatalogItem = catalog.find(x => x.id === itemId);
+    // console.log(hardCodedCatalogItem)
+
+    // hardCodedCatalogItem.likes += 1;
 
     const likesSpan = document.querySelector(`[data-likes="${itemId}"]`);
-    if(likesSpan) likesSpan.textContent = hardCodedCatalogItem.likes;
+    if(likesSpan) likesSpan.textContent = String(Number(likesSpan.textContent) + 1);
 
+    // TODO: After I presses "like" - i need to block this button and add movie id to "liked" list inside
+    //  user -> profile -> like list, and:
+    //  1. add API call that increases the movie LIKE count
+    //  2. for specific profile, display like button as clicked with animation or something for the button indicating it was clicked
     popHeart(btn);
     rainbow(btn);
 });
@@ -142,17 +112,41 @@ searchIcon.addEventListener('click', () => {
     });
 
 searchBoxInput.addEventListener("input", e => {
-    const query = e.target.value.toLowerCase();
-    renderFeed(item => item.title.toLowerCase().includes(query.trim().toLowerCase()));
+    const query = e.target.value.toLowerCase().trim();
+    const url = `/catalog/search/${encodeURIComponent(query)}`;
+
+    console.log(query);
+    console.log(`catalog/${query}`)
+    xhr.open("GET", url, true);
+    xhr.onload = function () {
+        if (xhr.status === 200) {
+            feed.innerHTML = xhr.responseText;
+            console.log(xhr.responseText);
+        } else {
+            debugger
+            console.log("Error!!!!")
+        }
+    };
+
+    xhr.send();
+
+    // renderFeed(item => item.title.toLowerCase().includes(query.trim().toLowerCase()));
 });
 
 document.addEventListener('DOMContentLoaded',()=>{
-    let u=null; try{u=localStorage.getItem('selectedProfile')}catch{}
-    if(!u){location.replace('../profile/profilePage.html');return;}
+    let u=null;
+    try{
+        u=localStorage.getItem('selectedProfile')
+    }catch{}
+
+    if(!u){
+        location.replace('../profile/profilePage.html');
+        return;
+    }
     const b=document.createElement('div');
     b.className='greeting-banner';
     b.textContent=`Hello "${u}"`;
-    const nav=document.querySelector('nav.navbar');
+    const nav=document.querySelector('nav.catalog');
     if(nav) nav.insertAdjacentElement('afterend',b); else document.body.prepend(b);
 });
 

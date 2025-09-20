@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return `
             <div class="text-center">
                 <input type="checkbox" id="edit-${profile.id}" class="edit-check">
-                <form id="form-${profile.id}" action="../navbar/mainDisplay.html" class="profile-form">
+                <form id="form-${profile.id}" action="../catalog/mainDisplay.html" class="profile-form">
                     <button type="submit" class="profile-btn" aria-label="${profile.username}">
                         <img src="${profile.avatar}" alt="${profile.username}" class="avatar">
                     </button>
@@ -73,7 +73,7 @@ function setupProfilesPage() {
             const username = (externalInput?.value || internalInput?.value || '').trim();
             if (!username) return;
             try { localStorage.setItem('selectedProfile', username); } catch {}
-            window.location.href = '../navbar/mainDisplay.html';
+            window.location.href = '../catalog/mainDisplay.html';
         });
     });
 }
@@ -85,7 +85,7 @@ function setupMainDisplayPage() {
     const banner = document.createElement('div');
     banner.className = 'greeting-banner';
     banner.textContent = `Hello "${username}"`;
-    const nav = document.querySelector('nav.navbar');
+    const nav = document.querySelector('nav.catalog');
     if (nav) nav.insertAdjacentElement('afterend', banner); else document.body.prepend(banner);
     const avatarImg = document.querySelector('.user-avatar');
     if (avatarImg) { avatarImg.alt = username; avatarImg.title = username; }
