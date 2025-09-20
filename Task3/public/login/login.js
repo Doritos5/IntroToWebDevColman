@@ -57,7 +57,6 @@ async function handleFormSubmit(e){
     }
 
 
-    // send to Express /login
     try {
         const res = await fetch("/login", {
             method: "POST",
@@ -65,19 +64,19 @@ async function handleFormSubmit(e){
             body: JSON.stringify({ email, password })
         });
         const data = await res.json();
-        // handle server response
+
         if (!res.ok) {
             toggleMessage(serverError, data.message || "Login failed");
             return;
         }
-        toggleMessage(serverError, "");
-        localStorage.setItem(email, JSON.stringify({"username": email, "status": "success"}));
-        toggleMessage(successMessage, 'Registration successful! Redirecting to profile pages...');
+
+        localStorage.setItem('username', data.user.username);
+
+        toggleMessage(successMessage, 'Login successful! Redirecting to profiles page...');
 
         setTimeout(() => {
-            window.location.href = "/profile";
+            window.location.href = "/profiles";
         }, 3000);
-
 
     } catch (err) {
         toggleMessage(serverError, err.message);

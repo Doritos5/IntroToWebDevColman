@@ -133,21 +133,20 @@ searchBoxInput.addEventListener("input", e => {
     // renderFeed(item => item.title.toLowerCase().includes(query.trim().toLowerCase()));
 });
 
-document.addEventListener('DOMContentLoaded',()=>{
-    let u=null;
-    try{
-        u=localStorage.getItem('selectedProfile')
-    }catch{}
+document.addEventListener('DOMContentLoaded', () => {
+    const username = localStorage.getItem('username');
+    const selectedProfileId = localStorage.getItem('selectedProfileId');
 
-    if(!u){
-        location.replace('../profile/profilePage.html');
+    if (!username || !selectedProfileId) {
+        window.location.replace('/profiles');
         return;
     }
-    const b=document.createElement('div');
-    b.className='greeting-banner';
-    b.textContent=`Hello "${u}"`;
-    const nav=document.querySelector('nav.catalog');
-    if(nav) nav.insertAdjacentElement('afterend',b); else document.body.prepend(b);
+
+    const banner = document.createElement('div');
+    banner.className = 'greeting-banner';
+    banner.textContent = `Hello, ${username}`;
+    const nav = document.querySelector('nav.catalog');
+    if (nav) nav.insertAdjacentElement('afterend', banner); else document.body.prepend(banner);
 });
 
 const signOut = document.getElementById('signOutLink')
@@ -155,9 +154,19 @@ const signOut = document.getElementById('signOutLink')
         .find(a => a.textContent.trim().toLowerCase() === 'sign out');
 
 if (signOut) {
-    signOut.addEventListener('click', (e) => {
+    signOut.addEventListener('click', async (e) => {
         e.preventDefault();
-        try { localStorage.removeItem('selectedProfile'); } catch {}
-        window.location.href = '../profile/profilePage.html';
+
+        try {
+            await fetch('/logout', { method: 'POST' });
+        } catch (error) {
+            console.error("Failed to logout from server:", error);
+        }
+
+        try {
+            localStorage.removeItem('selectedProfileId');
+        } catch {}
+
+        window.location.href = '/';
     });
 }

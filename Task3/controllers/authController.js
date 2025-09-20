@@ -35,6 +35,7 @@ async function login (req, res) {
         //     redirect: "/navbar_page/mainDisplay.html",
         //     user: sanitizeUser(user)
         // });
+        res.cookie('loggedInUser', user.email, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
         return res.status(200).json({ message: 'Login successful.', user: sanitizeUser(user) });
 
 

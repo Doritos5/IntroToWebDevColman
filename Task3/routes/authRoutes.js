@@ -4,6 +4,8 @@ const {
     logout,
     register,
 } = require('../controllers/authController');
+const { isAuthenticated } = require('../middleware/authMiddleware');
+
 const router = express.Router();
 
 router.get('/', (_req, res) => {
@@ -16,5 +18,9 @@ router.get('/register', (_req, res) => {
     res.render("register");
 });
 router.post('/register', register);
+
+router.get('/profiles', isAuthenticated, (req, res) => {
+    res.render('profilePage');
+});
 
 module.exports = router;
