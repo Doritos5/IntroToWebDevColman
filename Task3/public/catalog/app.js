@@ -2,6 +2,8 @@
 const feed = document.getElementById('feed');
 const searchIcon = document.querySelector('.bi-search');
 const searchBoxInput = document.getElementById('searchInput');
+const xhr = new XMLHttpRequest();
+
 
 const initialCatalog = Array.isArray(window.__CATALOG__) ? window.__CATALOG__ : [];
 let catalog = initialCatalog.map(item => ({ ...item }));
@@ -31,15 +33,6 @@ function cardHTML(item){
       </div>`;
 }
 
-function getFeedPageData(){
-    try {
-        const data = localStorage.getItem('feedPage.list');
-        if (!data) return null;
-        return JSON.parse(data);
-    } catch (_error) {
-        return null;
-    }
-}
 
 function renderFeed(filterFunc = null){
     let feedCatalog = Array.isArray(catalog) ? [...catalog] : [];
@@ -48,22 +41,10 @@ function renderFeed(filterFunc = null){
         feedCatalog = feedCatalog.filter(filterFunc);
     }
     feedCatalog.sort((a, b) => a.title.localeCompare(b.title));
-
+    console.log("done!")
     feed.innerHTML = feedCatalog.map(cardHTML).join('');
 }
 
-function saveItemsToLocalStorage(){
-    localStorage.setItem('feedPage.list', JSON.stringify(catalog));
-}
-
-function feedToLocalStorage(){
-    const storedItems = getFeedPageData();
-    if(!Array.isArray(storedItems) || storedItems.length === 0) {
-        saveItemsToLocalStorage();
-        return;
-    }
-    catalog = storedItems.map(item => ({ ...item }));
-}
 
 function popHeart(btn){
     // Create a heart
@@ -89,12 +70,6 @@ function rainbow(btn){
         btn.classList.remove('rainbow-once');
     }, { once: true });
 }
-// ------------------------- Listeners -------------------------
-document.addEventListener('DOMContentLoaded', () => {
-    feedToLocalStorage();
-    renderFeed();
-
-});
 
 // Scrolls up when the page finishes loading
 window.addEventListener("load", () => {
@@ -105,19 +80,25 @@ feed.addEventListener('click', (e) => {
     // "closest:" -> When I click on the "feed" area,
     // it looks for the first ancestor (including itself) that matches the selector.
     const btn = e.target.closest('.btn-outline-light');
-
+    console.log("111111")
     // Nothing found
     if(!btn) return;
-
+    console.log("222222")
     const itemId = Number(btn.getAttribute('value'));
+    console.log(itemId)
 
-    const hardCodedCatalogItem = catalog.find(x => x.id === itemId);
-    hardCodedCatalogItem.likes += 1;
-    saveItemsToLocalStorage();
+    // const hardCodedCatalogItem = catalog.find(x => x.id === itemId);
+    // console.log(hardCodedCatalogItem)
+
+    // hardCodedCatalogItem.likes += 1;
 
     const likesSpan = document.querySelector(`[data-likes="${itemId}"]`);
-    if(likesSpan) likesSpan.textContent = hardCodedCatalogItem.likes;
+    if(likesSpan) likesSpan.textContent = String(Number(likesSpan.textContent) + 1);
 
+    // TODO: After I presses "like" - i need to block this button and add movie id to "liked" list inside
+    //  user -> profile -> like list, and:
+    //  1. add API call that increases the movie LIKE count
+    //  2. for specific profile, display like button as clicked with animation or something for the button indicating it was clicked
     popHeart(btn);
     rainbow(btn);
 });
@@ -131,17 +112,41 @@ searchIcon.addEventListener('click', () => {
     });
 
 searchBoxInput.addEventListener("input", e => {
-    const query = e.target.value.toLowerCase();
-    renderFeed(item => item.title.toLowerCase().includes(query.trim().toLowerCase()));
+    const query = e.target.value.toLowerCase().trim();
+    const url = `/catalog/search/${encodeURIComponent(query)}`;
+
+    console.log(query);
+    console.log(`catalog/${query}`)
+    xhr.open("GET", url, true);
+    xhr.onload = function () {
+        if (xhr.status === 200) {
+            feed.innerHTML = xhr.responseText;
+            console.log(xhr.responseText);
+        } else {
+            debugger
+            console.log("Error!!!!")
+        }
+    };
+
+    xhr.send();
+
+    // renderFeed(item => item.title.toLowerCase().includes(query.trim().toLowerCase()));
 });
 
 document.addEventListener('DOMContentLoaded',()=>{
-    let u=null; try{u=localStorage.getItem('selectedProfile')}catch{}
-    if(!u){location.replace('../profile/profilePage.html');return;}
+    let u=null;
+    try{
+        u=localStorage.getItem('selectedProfile')
+    }catch{}
+
+    if(!u){
+        location.replace('../profile/profilePage.html');
+        return;
+    }
     const b=document.createElement('div');
     b.className='greeting-banner';
     b.textContent=`Hello "${u}"`;
-    const nav=document.querySelector('nav.navbar');
+    const nav=document.querySelector('nav.catalog');
     if(nav) nav.insertAdjacentElement('afterend',b); else document.body.prepend(b);
 });
 
