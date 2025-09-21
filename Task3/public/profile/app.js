@@ -39,9 +39,16 @@ document.addEventListener('DOMContentLoaded', () => {
     profilesContainer.addEventListener('submit', (e) => {
         if (e.target.classList.contains('profile-form')) {
             e.preventDefault();
-            const profileId = e.target.dataset.profileId;
+
+            const form = e.target;
+            const profileId = form.dataset.profileId;
+
+            const profileCaption = form.parentElement.querySelector('.profile-caption');
+            localStorage.setItem('selectedProfileName', profileCaption.textContent);
+
             localStorage.setItem('selectedProfileId', profileId);
-            window.location.href = '/catalog';
+
+            window.location.href = `/catalog?profileId=${profileId}`;
         }
     });
 
@@ -81,3 +88,4 @@ document.addEventListener('DOMContentLoaded', () => {
             profilesContainer.innerHTML = '<p style="color: white;">Could not load profiles. Please try logging in again.</p>';
         });
 });
+

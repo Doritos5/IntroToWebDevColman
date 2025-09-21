@@ -9,27 +9,41 @@
         {
           "id": "paul",
           "displayName": "Paul",
-          "avatar": "/images/netflix_profile.jpg"
+          "avatar": "/images/netflix_profile.jpg",
+          "likeContent": []
         },
         {
           "id": "alon",
           "displayName": "Alo",
-          "avatar": "/images/netflix_profile.jpg"
+          "avatar": "/images/netflix_profile.jpg",
+          "likeContent": []
         },
         {
           "id": "ronni",
-          "displayName": "Ronn",
-          "avatar": "/images/netflix_profile.jpg"
+          "displayName": "Ronni",
+          "avatar": "/images/netflix_profile.jpg",
+          "likeContent": [
+            2,
+            1
+          ]
         },
         {
           "id": "anna",
           "displayName": "Anna",
-          "avatar": "/images/netflix_profile.jpg"
+          "avatar": "/images/netflix_profile.jpg",
+          "likeContent": [
+            1,
+            2,
+            3
+          ]
         },
         {
           "id": "noa",
           "displayName": "Noa",
-          "avatar": "/images/netflix_profile.jpg"
+          "avatar": "/images/netflix_profile.jpg",
+          "likeContent": [
+            1
+          ]
         }
       ]
     },
@@ -42,7 +56,8 @@
         {
           "id": "profile-1758300162205",
           "displayName": "sadasd",
-          "avatar": "/images/netflix_profile.jpg"
+          "avatar": "/images/netflix_profile.jpg",
+          "likeContent": []
         }
       ]
     },
@@ -55,7 +70,8 @@
         {
           "id": "profile-1758301081768",
           "displayName": "asdasd",
-          "avatar": "/images/netflix_profile.jpg"
+          "avatar": "/images/netflix_profile.jpg",
+          "likeContent": []
         }
       ]
     }

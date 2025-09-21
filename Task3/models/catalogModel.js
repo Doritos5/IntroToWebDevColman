@@ -71,8 +71,15 @@ async function generateCatalogFeed(filterFunc = null){
 
     return catalog.map(generateCardHTML).join('');
 }
+
+
+
+
 module.exports = {
     generateCatalogFeed,
-    // getCatalog,
+    getCatalog,
+
     // incrementLikes,
 };
+
+
