@@ -1,4 +1,4 @@
-const { findUserByEmail, updateProfile } = require('../models/userModel');
+const { findUserByEmail, updateProfile, addProfileToUser } = require('../models/userModel');
 
 async function getUserProfiles(req, res) {
     try {
@@ -36,8 +36,25 @@ async function updateProfileName(req, res) {
     }
 }
 
-// --- ודא שאתה מייצא את שתי הפונקציות ---
+async function createNewProfile(req, res) {
+    const { profileName } = req.body;
+    const userEmail = req.email;
+
+    if (!profileName || profileName.trim().length < 1) {
+        return res.status(400).json({ message: 'Profile name is required.' });
+    }
+
+    try {
+        const newProfile = await addProfileToUser(userEmail, profileName.trim());
+        return res.status(201).json({ message: 'Profile created successfully!', profile: newProfile });
+    } catch (error) {
+        console.error('Error creating new profile:', error);
+        return res.status(500).json({ message: 'Server error.' });
+    }
+}
+
 module.exports = {
     getUserProfiles,
-    updateProfileName
+    updateProfileName,
+    createNewProfile
 };

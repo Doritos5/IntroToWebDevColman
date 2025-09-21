@@ -8,7 +8,7 @@
         "Thriller",
         "Sci-Fi"
       ],
-      "likes": 130,
+      "likes": 132,
       "poster": "https://picsum.photos/seed/silentcode/600/338"
     },
     {
@@ -50,7 +50,7 @@
         "Romance",
         "Comedy"
       ],
-      "likes": 211,
+      "likes": 212,
       "poster": "https://picsum.photos/seed/pixel/600/338"
     },
     {
@@ -60,7 +60,7 @@
       "genres": [
         "Adventure"
       ],
-      "likes": 64,
+      "likes": 65,
       "poster": "https://picsum.photos/seed/desert/600/338"
     },
     {
