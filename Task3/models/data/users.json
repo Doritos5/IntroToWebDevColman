@@ -16,15 +16,18 @@
           "id": "alon",
           "displayName": "Alo",
           "avatar": "/images/netflix_profile.jpg",
-          "likeContent": []
+          "likeContent": [
+            1,
+            5
+          ]
         },
         {
           "id": "ronni",
-          "displayName": "Ronni",
+          "displayName": "Ronn",
           "avatar": "/images/netflix_profile.jpg",
           "likeContent": [
             2,
-            1
+            6
           ]
         },
         {
@@ -44,6 +47,26 @@
           "likeContent": [
             1
           ]
+        },
+        {
+          "id": "profile-1758480319104",
+          "displayName": "guy",
+          "avatar": "/images/netflix_profile.jpg",
+          "likeContent": [
+            1
+          ]
+        },
+        {
+          "id": "profile-1758481002900",
+          "displayName": "dor",
+          "avatar": "/images/netflix_profile.jpg",
+          "likeContent": []
+        },
+        {
+          "id": "profile-1758483524270",
+          "displayName": "asaf",
+          "avatar": "/images/netflix_profile.jpg",
+          "likeContent": []
         }
       ]
     },

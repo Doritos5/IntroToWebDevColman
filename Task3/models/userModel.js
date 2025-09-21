@@ -88,6 +88,44 @@ async function addLikeToProfile(email, profileId, itemId) {
     return users[userIndex].profiles[profileIndex];
 }
 
+async function addProfileToUser(email, newProfileName) {
+    const users = await readUsersFile();
+    const userIndex = users.findIndex(user => user.email.toLowerCase() === email.toLowerCase());
+    if (userIndex === -1) {
+        throw new Error('User not found');
+    }
+
+    const newProfile = {
+        id: `profile-${Date.now()}`,
+        displayName: newProfileName,
+        avatar: '/images/netflix_profile.jpg', // Default avatar
+        likeContent: []
+    };
+
+    users[userIndex].profiles.push(newProfile);
+    await writeUsersFile(users);
+    return newProfile;
+}
+
+async function removeLikeFromProfile(email, profileId, itemId) {
+    const users = await readUsersFile();
+    const userIndex = users.findIndex(user => user.email.toLowerCase() === email.toLowerCase());
+    if (userIndex === -1) return null;
+
+    const profileIndex = users[userIndex].profiles.findIndex(p => p.id === profileId);
+    if (profileIndex === -1) return null;
+
+    const likedContent = users[userIndex].profiles[profileIndex].likeContent || [];
+    const itemIndexInLikes = likedContent.indexOf(itemId);
+
+    if (itemIndexInLikes > -1) {
+        likedContent.splice(itemIndexInLikes, 1);
+    }
+
+    await writeUsersFile(users);
+    return users[userIndex].profiles[profileIndex];
+}
+
 
 module.exports = {
     getUsers,
@@ -95,5 +133,7 @@ module.exports = {
     createUser,
     updateUser,
     updateProfile,
-    addLikeToProfile
+    addLikeToProfile,
+    addProfileToUser,
+    removeLikeFromProfile
 };

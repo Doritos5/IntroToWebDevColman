@@ -22,6 +22,7 @@ async function writeCatalogFile(items) {
     await fs.writeFile(CATALOG_PATH, JSON.stringify(payload, null, 2), 'utf8');
 }
 
+
 async function getCatalog() {
     return readCatalogFile();
 }
@@ -30,16 +31,31 @@ async function incrementLikes(itemId) {
     const items = await readCatalogFile();
     const index = items.findIndex((item) => item.id === itemId);
     if (index === -1) return null;
+
     items[index].likes += 1;
+
+    await writeCatalogFile(items);
+    return items[index];
+}
+
+async function decrementLikes(itemId) {
+    const items = await readCatalogFile();
+    const index = items.findIndex((item) => item.id === itemId);
+    if (index === -1) return null;
+
+    if (items[index].likes > 0) {
+        items[index].likes -= 1;
+    }
+
     await writeCatalogFile(items);
     return items[index];
 }
 
 
+
 function generateCardHTML(item){
     const itemLikes = item.likes;
     const badges = item.genres.map(g => `<span class="badge text-bg-secondary me-1 mb-1">${g}</span>`).join('');
-    item.likes = itemLikes;
 
     return `
       <div class="col-6 col-md-4 col-lg-3 mb-4">
@@ -50,7 +66,6 @@ function generateCardHTML(item){
             <div class="small text-white-50 mb-2">${item.year}</div>
             <div class="mb-3">${badges}</div>
             <div class="mt-auto d-flex justify-content-between align-items-center">
-            <!-- 'data-like' it's the right way to pass metadata to span, as 'value' like I did in 'button' won't work  -->
               <span class="small"><i class="bi bi-heart-fill text-danger me-1"></i>
               <span data-likes="${item.id}">${itemLikes}</span>
               </span>
@@ -73,13 +88,10 @@ async function generateCatalogFeed(filterFunc = null){
 }
 
 
-
-
 module.exports = {
     generateCatalogFeed,
     getCatalog,
-
-    // incrementLikes,
+    incrementLikes,
+    decrementLikes
 };
-
 

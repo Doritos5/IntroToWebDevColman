@@ -1,8 +1,25 @@
 document.addEventListener('DOMContentLoaded', () => {
     const feed = document.getElementById('feed');
     const greetingBanner = document.querySelector('.greeting-banner');
-
     let catalog = [];
+
+    function popHeart(btn) {
+        const rect = btn.getBoundingClientRect();
+        const heart = document.createElement('div');
+        heart.className = 'heart-fly';
+        heart.innerHTML = '<i class="bi bi-balloon-heart-fill"></i>';
+        heart.style.left = `${rect.left + rect.width / 2}px`;
+        heart.style.top = `${rect.top + window.scrollY}px`;
+        document.body.appendChild(heart);
+        heart.addEventListener('animationend', () => heart.remove());
+    }
+
+    function rainbow(btn) {
+        btn.classList.add('rainbow-once');
+        btn.addEventListener('animationend', () => {
+            btn.classList.remove('rainbow-once');
+        }, { once: true });
+    }
 
     async function initializeCatalog() {
         const selectedProfileId = localStorage.getItem('selectedProfileId');
@@ -20,13 +37,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(`/catalog/data?profileId=${selectedProfileId}`);
             if (!response.ok) throw new Error('Failed to fetch catalog data');
-
             const data = await response.json();
             catalog = data.catalog;
             const likedIds = new Set(data.likedContent || []);
-
             renderFeed(likedIds);
-
         } catch (error) {
             console.error(error);
             feed.innerHTML = '<p class="text-white">Could not load the catalog. Please try again later.</p>';
@@ -44,9 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function cardHTML(item, likedIds) {
         const isLiked = likedIds.has(item.id);
         const buttonText = isLiked ? 'Liked' : 'Like';
-        const buttonClass = isLiked ? 'btn-danger' : 'btn-outline-light';
-        const disabledAttr = isLiked ? 'disabled' : '';
-
+        const buttonClass = isLiked ? 'btn-danger' : 'btn-outline-light'; // Use btn-danger for 'unlike'
         const badges = item.genres.map(g => `<span class="badge text-bg-secondary me-1 mb-1">${g}</span>`).join('');
 
         return `
@@ -62,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <i class="bi bi-heart-fill text-danger me-1"></i>
                     <span data-likes-id="${item.id}">${item.likes}</span>
                   </span>
-                  <button class="btn btn-sm ${buttonClass}" data-item-id="${item.id}" ${disabledAttr}>${buttonText}</button>
+                  <button class="btn btn-sm ${buttonClass}" data-item-id="${item.id}">${buttonText}</button>
                 </div>
               </div>
             </div>
@@ -70,6 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     feed.addEventListener('click', async (e) => {
+        // Target any button with a data-item-id attribute
         if (e.target.matches('[data-item-id]')) {
             const button = e.target;
             const itemId = button.dataset.itemId;
@@ -80,58 +93,60 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            const isUnlike = button.classList.contains('btn-danger');
+            const endpoint = isUnlike ? '/api/unlike' : '/api/like';
+
             button.disabled = true;
 
             try {
-                const response = await fetch('/api/like', {
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ itemId: Number(itemId), profileId: profileId })
                 });
 
                 const result = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(result.message || 'Failed to like item');
-                }
+                if (!response.ok) throw new Error(result.message || 'Failed to process request');
 
                 const likesSpan = document.querySelector(`[data-likes-id="${itemId}"]`);
                 if (likesSpan) {
                     likesSpan.textContent = result.newLikesCount;
                 }
 
-                button.textContent = 'Liked';
-                button.classList.remove('btn-outline-light');
-                button.classList.add('btn-danger');
+                if (isUnlike) {
+                    button.textContent = 'Like';
+                    button.classList.remove('btn-danger');
+                    button.classList.add('btn-outline-light');
+                } else {
+                    button.textContent = 'Liked';
+                    button.classList.remove('btn-outline-light');
+                    button.classList.add('btn-danger');
+                    popHeart(button);
+                    rainbow(button);
+                }
+
+                button.disabled = false;
 
             } catch (error) {
-                console.error('Like error:', error);
+                console.error('Like/Unlike error:', error);
                 button.disabled = false;
                 alert(error.message);
             }
         }
     });
 
-    const signOut =
-        document.getElementById('signOutLink') ||
-        Array.from(document.querySelectorAll('.dropdown-menu a'))
-            .find(a => a.textContent.trim().toLowerCase() === 'sign out');
-
+    const signOut = document.getElementById('signOutLink') || Array.from(document.querySelectorAll('.dropdown-menu a')).find(a => a.textContent.trim().toLowerCase() === 'sign out');
     if (signOut) {
         signOut.addEventListener('click', (e) => {
             e.preventDefault();
             try {
-                localStorage.removeItem('authEmail');
                 localStorage.removeItem('selectedProfileId');
                 localStorage.removeItem('selectedProfileName');
-                localStorage.removeItem('selectedProfile');
-                sessionStorage.clear?.();
             } catch {}
-
             window.location.replace('/');
         });
     }
 
-
     initializeCatalog();
 });
+

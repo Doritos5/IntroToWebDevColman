@@ -73,4 +73,33 @@ async function handleLike(req, res) {
     }
 }
 
-module.exports = { handleLike };
+async function handleUnlike(req, res) {
+    const { itemId, profileId } = req.body;
+    const userEmail = req.email;
+
+    if (!itemId || !profileId) {
+        return res.status(400).json({ message: 'Item ID and Profile ID are required.' });
+    }
+
+    try {
+        const [updatedProfile, updatedItem] = await Promise.all([
+            userModel.removeLikeFromProfile(userEmail, profileId, Number(itemId)),
+            catalogModel.decrementLikes(Number(itemId)) // Assumes this function exists in your partner's model
+        ]);
+
+        if (!updatedProfile || !updatedItem) {
+            return res.status(404).json({ message: 'Profile or Catalog item not found.' });
+        }
+
+        res.json({
+            message: 'Unlike successful!',
+            newLikesCount: updatedItem.likes
+        });
+
+    } catch (error) {
+        console.error('Error handling unlike:', error);
+        res.status(500).json({ message: 'Server error while processing unlike.' });
+    }
+}
+
+module.exports = { handleLike, handleUnlike };
