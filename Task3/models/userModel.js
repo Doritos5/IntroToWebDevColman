@@ -67,10 +67,33 @@ async function updateProfile(email, profileId, updates) {
     return users[userIndex].profiles[profileIndex];
 }
 
+async function addLikeToProfile(email, profileId, itemId) {
+    const users = await readUsersFile();
+    const userIndex = users.findIndex(user => user.email.toLowerCase() === email.toLowerCase());
+    if (userIndex === -1) return null;
+
+    const profileIndex = users[userIndex].profiles.findIndex(p => p.id === profileId);
+    if (profileIndex === -1) return null;
+
+    if (!users[userIndex].profiles[profileIndex].likeContent) {
+        users[userIndex].profiles[profileIndex].likeContent = [];
+    }
+
+    const likedContent = users[userIndex].profiles[profileIndex].likeContent;
+    if (!likedContent.includes(itemId)) {
+        likedContent.push(itemId);
+    }
+
+    await writeUsersFile(users);
+    return users[userIndex].profiles[profileIndex];
+}
+
+
 module.exports = {
     getUsers,
     findUserByEmail,
     createUser,
     updateUser,
     updateProfile,
+    addLikeToProfile
 };

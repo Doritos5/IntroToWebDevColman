@@ -1,16 +1,20 @@
 const express = require('express');
-const { renderCatalogPage,
-        getCatalogByQuery} = require('../controllers/catalogController');
-
 const router = express.Router();
-
 const { isAuthenticated } = require('../middleware/authMiddleware');
+const {
+    renderCatalogPage,
+    getCatalogData,
+    getCatalogByQuery
+} = require('../controllers/catalogController');
 
-router.get('/', renderCatalogPage);
-router.get("/search/", getCatalogByQuery); // i do this for empty query - i.e. textbox is empty
-router.get("/search/:query", getCatalogByQuery);
-router.get('/', isAuthenticated, (req, res) => {
-    res.render('catalog');
-});
+router.get('/', isAuthenticated, renderCatalogPage);
+
+
+router.get('/data', isAuthenticated, getCatalogData);
+
+
+router.get("/search/", isAuthenticated, getCatalogByQuery);
+router.get("/search/:query", isAuthenticated, getCatalogByQuery);
 
 module.exports = router;
+

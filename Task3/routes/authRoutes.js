@@ -23,4 +23,8 @@ router.get('/profiles', isAuthenticated, (req, res) => {
     res.render('profilePage');
 });
 
+router.get('/settings', isAuthenticated, (req, res) => {
+    res.render('settings'); // This will render the views/settings.ejs file
+});
+
 module.exports = router;
