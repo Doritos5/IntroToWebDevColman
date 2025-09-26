@@ -2,7 +2,6 @@ const path = require('path');
 const express = require('express');
 
 const authRoutes = require('./routes/authRoutes');
-// const userRoutes = require('./routes/userRoutes');
 const catalogRoutes = require('./routes/catalogRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const likeRoutes = require('./routes/likeRoutes');
@@ -30,9 +29,6 @@ app.use('/', authRoutes);
 app.use('/catalog', catalogRoutes);
 app.use('/api', profileRoutes);
 app.use('/api', likeRoutes);
-// app.use("/home", homeViewRouter);
-// app.use("/books", bookViewRouter);
-// app.use("/api/books", apiBookRouter);
 
 
 app.listen(PORT, () => {

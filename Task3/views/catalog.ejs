@@ -13,7 +13,11 @@
     <!-- Bootstrap JS (includes Popper) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <script src="/catalog/app.js"></script>
+    <!-- defer means - don't run the code until the HTML file is fully loaded. if
+    I remove this line the search buttons won't work as the JS looking for the buttons return null because they are
+    not loaded yet
+    -->
+    <script src="/catalog/app.js" defer></script>
 </head>
 <body class="navbar-page">
 

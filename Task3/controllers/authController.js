@@ -30,11 +30,6 @@ async function login (req, res) {
             return res.status(401).json({ message: 'Invalid email or password.' });
         }
 
-        // return res.json({
-        //     ok: true,
-        //     redirect: "/navbar_page/mainDisplay.html",
-        //     user: sanitizeUser(user)
-        // });
         res.cookie('loggedInUser', user.email, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
         return res.status(200).json({ message: 'Login successful.', user: sanitizeUser(user) });
 
@@ -48,9 +43,9 @@ async function login (req, res) {
 async function logout (req, res) {
     const { email } = req.body || {};
     if (email) {
-        // console.log(`[Auth] ${email} logged out.`);
+        console.log(`[Auth] ${email} logged out.`);
     } else {
-        // console.log('[Auth] Logout requested without email.');
+        console.log('[Auth] Logout requested without email.');
     }
     try { localStorage.removeItem('selectedProfile'); } catch {}
 
@@ -66,15 +61,15 @@ async function register (req, res) {
     }
 
     if (!isValidEmail(email)) {
-        // console.log('[Auth] Registration failed - invalid email format.');
+        console.log('[Auth] Registration failed - invalid email format.');
         return res.status(400).json({ message: 'Please provide a valid email address.' });
     }
     if (!isValidUsername(username)) {
-        // console.log('[Auth] Registration failed - invalid username.');
+        console.log('[Auth] Registration failed - invalid username.');
         return res.status(400).json({ message: 'Username must be at least 3 characters and contain only letters, numbers, spaces or underscores.' });
     }
     if (!isValidPassword(password)) {
-        // console.log('[Auth] Registration failed - weak password.');
+        console.log('[Auth] Registration failed - weak password.');
         return res.status(400).json({ message: 'Password must be at least 3 characters long.' });
     }
 
@@ -83,7 +78,7 @@ async function register (req, res) {
     try {
         const existingUser = await findUserByEmail(email);
         if (existingUser) {
-            // console.log(`[Auth] Registration failed - email already in use: ${email}`);
+            console.log(`[Auth] Registration failed - email already in use: ${email}`);
             return res.status(409).json({ message: 'An account with this email already exists.' });
         }
 
@@ -108,7 +103,7 @@ async function register (req, res) {
         console.error('[Auth] Registration error:', error);
         return res.status(500).json({ message: 'An unexpected error occurred.' });
     }
-};
+}
 
 module.exports = {
     login,

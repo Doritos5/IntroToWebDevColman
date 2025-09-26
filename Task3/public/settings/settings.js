@@ -1,6 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Settings page script loaded.');
-
     const form = document.getElementById('add-profile-form');
     const profileNameInput = document.getElementById('profileName');
     const messageContainer = document.getElementById('message-container');
@@ -17,17 +15,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        console.log('Form submission intercepted!');
 
         const profileName = profileNameInput.value.trim();
-        console.log(`Profile name entered: "${profileName}"`);
-
         if (!profileName) {
             showMessage('Profile name cannot be empty.', true);
             return;
         }
 
-        console.log('Sending POST request to /api/profiles...');
         try {
             const response = await fetch('/api/profiles', {
                 method: 'POST',
@@ -35,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ profileName: profileName }),
             });
 
-            console.log('Received response from server:', response);
             const data = await response.json();
 
             if (!response.ok) {
