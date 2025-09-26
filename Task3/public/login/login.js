@@ -1,3 +1,4 @@
+// ------------------------- Variables -------------------------
 const loginForm = document.querySelector('#login-form');
 const loginBtn = document.querySelector(".btn.login-btn.btn-lg");
 const passwordError = document.getElementById("passwordError");
@@ -5,7 +6,7 @@ const emailError = document.getElementById("emailError");
 const serverError = document.getElementById("registerServerError");
 const successMessage = document.getElementById('registerSuccess');
 
-// FUNCTIONS
+// ------------------------- Functions -------------------------
 
 // Validation functions
 function isValidEmail(email) {
@@ -52,7 +53,6 @@ async function handleFormSubmit(e){
     }
 
     if (!valid) {
-        console.log("not valud")
         return;
     }
 
@@ -84,6 +84,18 @@ async function handleFormSubmit(e){
     }
 
 }
+
+// ------------------------- Listeners -------------------------
+window.addEventListener("DOMContentLoaded", () => {
+    // Check if localStorage has a value for "aaa"
+    const username = localStorage.getItem("username");
+
+    // If there is username, redirect to profile page
+    if (username) {
+        // Redirect to login page
+        window.location.href = "/profiles";
+    }
+});
 
 // add submit so Enter key works too
 loginForm.addEventListener('submit', handleFormSubmit);

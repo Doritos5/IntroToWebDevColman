@@ -1,67 +1,71 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const feed = document.getElementById('feed');
-    const greetingBanner = document.querySelector('.greeting-banner');
-    let catalog = [];
+// ------------------------- Variables -------------------------
+const searchBoxInput = document.getElementById('searchInput');
+const searchIcon = document.querySelector('.bi-search');
+const xhr = new XMLHttpRequest();
+const feed = document.getElementById('feed');
+const greetingBanner = document.querySelector('.greeting-banner');
+let catalog = [];
 
-    function popHeart(btn) {
-        const rect = btn.getBoundingClientRect();
-        const heart = document.createElement('div');
-        heart.className = 'heart-fly';
-        heart.innerHTML = '<i class="bi bi-balloon-heart-fill"></i>';
-        heart.style.left = `${rect.left + rect.width / 2}px`;
-        heart.style.top = `${rect.top + window.scrollY}px`;
-        document.body.appendChild(heart);
-        heart.addEventListener('animationend', () => heart.remove());
+
+// ------------------------- Functions -------------------------
+function popHeart(btn) {
+    const rect = btn.getBoundingClientRect();
+    const heart = document.createElement('div');
+    heart.className = 'heart-fly';
+    heart.innerHTML = '<i class="bi bi-balloon-heart-fill"></i>';
+    heart.style.left = `${rect.left + rect.width / 2}px`;
+    heart.style.top = `${rect.top + window.scrollY}px`;
+    document.body.appendChild(heart);
+    heart.addEventListener('animationend', () => heart.remove());
+}
+
+function rainbow(btn) {
+    btn.classList.add('rainbow-once');
+    btn.addEventListener('animationend', () => {
+        btn.classList.remove('rainbow-once');
+    }, {once: true});
+}
+
+async function initializeCatalog() {
+    const selectedProfileId = localStorage.getItem('selectedProfileId');
+    const profileName = localStorage.getItem('selectedProfileName');
+
+    if (!selectedProfileId || !profileName) {
+        window.location.href = "/profiles";
+        return;
+    }
+    if (greetingBanner) {
+        greetingBanner.textContent = `Hello, ${profileName}`;
     }
 
-    function rainbow(btn) {
-        btn.classList.add('rainbow-once');
-        btn.addEventListener('animationend', () => {
-            btn.classList.remove('rainbow-once');
-        }, { once: true });
+    const response = await fetch(`/catalog/data?profileId=${selectedProfileId}`);
+    if (!response.ok) {
+        console.error("Failed to fetch catalog data");
+        feed.innerHTML = '<p class="text-white">Could not load the catalog. Please try again later.</p>';
+        return;
     }
+    const data = await response.json();
+    catalog = data.catalog;
+    const likedIds = new Set(data.likedContent || []);
+    renderFeed(likedIds);
 
-    async function initializeCatalog() {
-        const selectedProfileId = localStorage.getItem('selectedProfileId');
-        const profileName = localStorage.getItem('selectedProfileName');
+}
 
-        if (!selectedProfileId || !profileName) {
-            window.location.replace('/profiles');
-            return;
-        }
-
-        if (greetingBanner) {
-            greetingBanner.textContent = `Hello, ${profileName}`;
-        }
-
-        try {
-            const response = await fetch(`/catalog/data?profileId=${selectedProfileId}`);
-            if (!response.ok) throw new Error('Failed to fetch catalog data');
-            const data = await response.json();
-            catalog = data.catalog;
-            const likedIds = new Set(data.likedContent || []);
-            renderFeed(likedIds);
-        } catch (error) {
-            console.error(error);
-            feed.innerHTML = '<p class="text-white">Could not load the catalog. Please try again later.</p>';
-        }
+function renderFeed(likedIds = new Set()) {
+    if (!catalog || catalog.length === 0) {
+        feed.innerHTML = '<p class="text-white">No items to display.</p>';
+        return;
     }
+    feed.innerHTML = catalog.map(item => cardHTML(item, likedIds)).join('');
+}
 
-    function renderFeed(likedIds = new Set()) {
-        if (!catalog || catalog.length === 0) {
-            feed.innerHTML = '<p class="text-white">No items to display.</p>';
-            return;
-        }
-        feed.innerHTML = catalog.map(item => cardHTML(item, likedIds)).join('');
-    }
+function cardHTML(item, likedIds) {
+    const isLiked = likedIds.has(item.id);
+    const buttonText = isLiked ? 'Liked' : 'Like';
+    const buttonClass = isLiked ? 'btn-danger' : 'btn-outline-light'; // Use btn-danger for 'unlike'
+    const badges = item.genres.map(g => `<span class="badge text-bg-secondary me-1 mb-1">${g}</span>`).join('');
 
-    function cardHTML(item, likedIds) {
-        const isLiked = likedIds.has(item.id);
-        const buttonText = isLiked ? 'Liked' : 'Like';
-        const buttonClass = isLiked ? 'btn-danger' : 'btn-outline-light'; // Use btn-danger for 'unlike'
-        const badges = item.genres.map(g => `<span class="badge text-bg-secondary me-1 mb-1">${g}</span>`).join('');
-
-        return `
+    return `
           <div class="col-6 col-md-4 col-lg-3 mb-4">
             <div class="card h-100 bg-dark text-white">
               <img src="${item.poster}" class="card-img-top" alt="${item.title}">
@@ -79,7 +83,10 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             </div>
           </div>`;
-    }
+}
+
+// ------------------------- Listeners -------------------------
+document.addEventListener('DOMContentLoaded', () => {
 
     feed.addEventListener('click', async (e) => {
         // Target any button with a data-item-id attribute
@@ -98,40 +105,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
             button.disabled = true;
 
-            try {
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ itemId: Number(itemId), profileId: profileId })
-                });
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({itemId: Number(itemId), profileId: profileId})
+            });
 
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.message || 'Failed to process request');
-
-                const likesSpan = document.querySelector(`[data-likes-id="${itemId}"]`);
-                if (likesSpan) {
-                    likesSpan.textContent = result.newLikesCount;
-                }
-
-                if (isUnlike) {
-                    button.textContent = 'Like';
-                    button.classList.remove('btn-danger');
-                    button.classList.add('btn-outline-light');
-                } else {
-                    button.textContent = 'Liked';
-                    button.classList.remove('btn-outline-light');
-                    button.classList.add('btn-danger');
-                    popHeart(button);
-                    rainbow(button);
-                }
-
-                button.disabled = false;
-
-            } catch (error) {
-                console.error('Like/Unlike error:', error);
+            const result = await response.json();
+            if (!response.ok) {
+                console.error('Like/Unlike error:', result.message || "Failed to process request");
                 button.disabled = false;
                 alert(error.message);
+                return;
             }
+
+            const likesSpan = document.querySelector(`[data-likes-id="${itemId}"]`);
+            if (likesSpan) {
+                likesSpan.textContent = result.newLikesCount;
+            }
+
+            if (isUnlike) {
+                button.textContent = 'Like';
+                button.classList.remove('btn-danger');
+                button.classList.add('btn-outline-light');
+            } else {
+                button.textContent = 'Liked';
+                button.classList.remove('btn-outline-light');
+                button.classList.add('btn-danger');
+                popHeart(button);
+                rainbow(button);
+            }
+
+            button.disabled = false;
+
         }
     });
 
@@ -142,7 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 localStorage.removeItem('selectedProfileId');
                 localStorage.removeItem('selectedProfileName');
-            } catch {}
+            } catch {
+            }
             window.location.replace('/');
         });
     }
@@ -150,3 +157,26 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeCatalog();
 });
 
+searchIcon.addEventListener('click', () => {
+    const input = document.getElementById('searchInput');
+    input.classList.toggle('active');
+
+    if (input.classList.contains('active')) {
+        input.focus();
+    }
+});
+
+searchBoxInput.addEventListener("input", e => {
+    const query = e.target.value.toLowerCase().trim();
+    const url = `/catalog/search/${encodeURIComponent(query)}`;
+
+    xhr.open("GET", url, true);
+    xhr.onload = function () {
+        if (xhr.status === 200) {
+            feed.innerHTML = xhr.responseText;
+        } else {
+            console.log("Error!!!!")
+        }
+    };
+    xhr.send();
+});

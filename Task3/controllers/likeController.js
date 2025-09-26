@@ -84,7 +84,7 @@ async function handleUnlike(req, res) {
     try {
         const [updatedProfile, updatedItem] = await Promise.all([
             userModel.removeLikeFromProfile(userEmail, profileId, Number(itemId)),
-            catalogModel.decrementLikes(Number(itemId)) // Assumes this function exists in your partner's model
+            catalogModel.decrementLikes(Number(itemId))
         ]);
 
         if (!updatedProfile || !updatedItem) {

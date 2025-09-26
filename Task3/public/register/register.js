@@ -40,7 +40,6 @@ async function registerUser(email, username, password) {
     });
 
     const payload = await response.json();
-    debugger
     if (!response.ok) {
         throw new Error(payload.message || 'Unable to register.');
     }
@@ -79,10 +78,8 @@ registerForm.addEventListener('submit', async (event) => {
     }
 
     if (!valid) {
-        console.log("not valud")
         return;
     }
-    console.log("valid")
     try {
         await registerUser(email, username, password);
         toggleMessage(successMessage, 'Registration successful! Redirecting to login...');
