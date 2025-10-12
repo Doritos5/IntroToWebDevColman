@@ -2,9 +2,9 @@
   "name": "task3",
   "version": "1.0.0",
   "description": "Task 3 Express MVC application",
-  "main": "index.js",
+  "main": "../backup/application.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node ../backup/application.js"
   },
   "keywords": [],
   "author": "",
@@ -12,8 +12,10 @@
   "type": "commonjs",
   "dependencies": {
     "cookie-parser": "^1.4.7",
-    "express": "^5.1.0",
+    "dompurify": "^3.2.7",
+    "dotenv": "^17.2.3",
     "ejs": "^3.1.10",
-    "dompurify": "^3.2.7"
+    "express": "^5.1.0",
+    "mongoose": "^8.19.1"
   }
 }

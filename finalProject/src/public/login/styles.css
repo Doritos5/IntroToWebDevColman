@@ -1,0 +1,98 @@
+body.login-page{
+    color:#fff;
+}
+.bg-hero{
+    position:fixed;
+    inset:0;
+    background-image:
+            linear-gradient(rgba(0,0,0,.65), rgba(0,0,0,.65)),
+            url("../images/login_background.jpeg");
+
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+    filter:saturate(1.1) contrast(1.05);
+    z-index:-1;
+}
+
+
+.brand{
+    position:fixed;
+    top:18px;
+    left:24px;
+    font-weight:900;
+    letter-spacing:.05em;
+    font-size:32px;
+    color: red;
+
+    /* So we can't select the text with the mouse, it acts like an image */
+    user-select:none;
+}
+
+.login-card{
+    /*width:100%;*/
+    max-width: 440px;
+    background: rgba(0,0,0,.75);
+    border-radius: 8px;
+    padding: 40px 55px 36px;
+}
+
+.form-control{
+    background-color: #333333FF;
+    border: 1px solid #444;
+    color: #fff;
+}
+.form-control::placeholder{
+    color:#8c8c8c;
+    }
+
+/* Comment: this is the login text boxes, it means whn i click on textbox the background will be darker
+also, text color will be white, and the border of the textbox when i click on it will be gray and not blue */
+.form-control:focus {
+    background-color: #222;   /* darker when focused */
+    color: #fff;              /* keep text white */
+    border-color: #777;
+    box-shadow: none;         /* remove glow if you want */
+}
+
+.login-btn{
+    background-color: red;
+    border:none;
+    color:#fff;
+    font-weight:700;
+}
+.login-btn:hover{ background-color:#bf0810;
+    }
+
+a.link-muted{
+    color: #b3b3b3;
+    text-decoration:none;
+    }
+a.link-muted:hover{ text-decoration:underline;
+    }
+
+.divider{ height:1px;
+    background:#2f2f2f;
+    margin: 16px 0 8px;
+    }
+
+.tiny{ font-size:.85rem;
+    color: #b3b3b3;
+    }
+
+/* Make the center block align similarly to Netflix */
+.page-wrap{
+    min-height:100%;
+    display:grid;
+    place-items:center;
+    padding: 80px 16px;
+    }
+
+.btn-dark.btn-lg{
+    background:#272727;
+    border-color:#3a3a3a;
+}
+
+.container.d-flex{
+    color:#9a9a9a;
+}

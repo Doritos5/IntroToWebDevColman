@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SuperNetflix</title>
+
+    <link href="/catalog/styles.css" rel="stylesheet" />
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+    <!-- Bootstrap JS (includes Popper) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- defer means - don't run the code until the HTML file is fully loaded. if
+    I remove this line the search buttons won't work as the JS looking for the buttons return null because they are
+    not loaded yet
+    -->
+    <script src="/catalog/app.js" defer></script>
+</head>
+<body class="navbar-page">
+
+<nav class="navbar navbar-expand-lg fixed-top">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">SuperNetflix</a>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item"><a class="nav-link" href="#">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">TV Shows</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Movies</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">New & Popular</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">My List</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Browse by Languages</a></li>
+            </ul>
+
+            <div class="d-flex align-items-center">
+                <span class="icon-btn bi bi-search"></span>
+                <label for="searchInput" class="visually-hidden">Search</label>
+                <input id="searchInput"
+                       type="text"
+                       class="form-control bg-dark text-white border-0 ms-2 search-box"
+                       placeholder="Search..."
+                />
+
+                <span class="icon-btn bi bi-bell"></span>
+
+                <div class="dropdown ms-3">
+                    <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="avatarMenu" data-bs-toggle="dropdown">
+                        <img src="/images/netflix_profile.jpg" alt="User" class="rounded user-avatar">
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end text-small shadow">
+                        <li><a class="dropdown-item" href="#">Profile</a></li>
+                        <li><a class="dropdown-item" href="/settings">Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" id="signOutLink">Sign out</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<% if (locals.profileName) { %>
+    <div class="greeting-banner">
+        Hello, <%= profileName %>
+    </div>
+<% } %>
+
+
+<main class="container-xxl">
+    <header class="mb-4">
+        <h2 class="h4 text-white-50 mb-0">Continue Watching</h2>
+    </header>
+
+    <div class="row row-cols-1 row-cols-md-3 mx-4 my-6 text-center" id="feed" data-page-size="<%= videosPerPage %>"></div>
+    <div id="feedSentinel" class="text-white-50">Loading more videos…</div>
+</main>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+<div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="videoModalLabel">Video title</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="video-shell" id="videoShell">
+                    <video id="catalogVideoPlayer" preload="metadata"></video>
+                    <button class="overlay-play" id="overlayPlayButton" type="button">
+                        <i class="bi bi-play-fill"></i>
+                    </button>
+                    <div class="video-controls" id="videoControls">
+                        <div class="controls-left">
+                            <button class="control-btn" id="playPauseButton" type="button" aria-label="Play or pause">
+                                <i class="bi bi-play-fill"></i>
+                            </button>
+                            <button class="control-btn skip-btn" id="rewindButton" type="button" aria-label="Rewind 10 seconds">
+                                <span class="skip-indicator">10</span>
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                            <button class="control-btn skip-btn" id="forwardButton" type="button" aria-label="Forward 10 seconds">
+                                <span class="skip-indicator">10</span>
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                            <div class="timeline-group">
+                                <span class="time-label" id="currentTimeLabel">0:00</span>
+                                <input type="range" id="videoSeekBar" min="0" value="0" step="1" aria-label="Video timeline" />
+                                <span class="time-label" id="durationTimeLabel">0:00</span>
+                            </div>
+                        </div>
+                        <div class="controls-right">
+                            <button class="control-btn" id="nextEpisodeButton" type="button" aria-label="Next episode">
+                                <i class="bi bi-skip-end-fill"></i>
+                            </button>
+                            <button class="control-btn" id="episodeListButton" type="button" aria-label="Episode list" data-bs-toggle="offcanvas" data-bs-target="#episodeDrawer">
+                                <i class="bi bi-list"></i>
+                            </button>
+                            <button class="control-btn" id="fullscreenButton" type="button" aria-label="Toggle fullscreen">
+                                <i class="bi bi-arrows-fullscreen"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <p id="videoModalDescription" class="mt-3 mb-0 small"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="offcanvas offcanvas-end bg-dark text-white" tabindex="-1" id="episodeDrawer" aria-labelledby="episodeDrawerLabel">
+    <div class="offcanvas-header">
+        <h5 id="episodeDrawerLabel">Episodes</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        <ul class="list-group list-group-flush" id="episodeList"></ul>
+    </div>
+</div>
+</body>
+</html>
