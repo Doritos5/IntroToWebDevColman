@@ -2,9 +2,9 @@
   "name": "final_project",
   "version": "1.0.0",
   "description": "This is the package where we are working on our project",
-  "main": "../backup/application.js",
+  "main": "application.js",
   "scripts": {
-    "start": "node ../backup/application.js"
+    "start": "node /application.js"
   },
   "keywords": [],
   "author": "",

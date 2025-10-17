@@ -93,7 +93,7 @@ window.addEventListener("DOMContentLoaded", () => {
     // If there is username, redirect to profile page
     if (username) {
         // Redirect to login page
-        window.location.href = "/profiles_page";
+        // window.location.href = "/profiles_page";
     }
 });
 
