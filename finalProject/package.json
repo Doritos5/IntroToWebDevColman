@@ -1,0 +1,21 @@
+{
+  "name": "final_project",
+  "version": "1.0.0",
+  "description": "This is the package where we are working on our project",
+  "main": "application.js",
+  "scripts": {
+    "start": "node /application.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "dompurify": "^3.2.7",
+    "dotenv": "^17.2.3",
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "mongoose": "^8.19.1"
+  }
+}

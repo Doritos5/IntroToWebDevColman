@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= video.title %> • SuperNetflix</title>
+
+    <link href="/item/styles.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/item/app.js" defer></script>
+</head>
+<body class="item-page" data-video-id="<%= video.id %>" data-profile-id="<%= profileId %>" data-liked="<%= isLiked %>">
+<nav class="navbar navbar-expand-lg fixed-top">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/catalog">SuperNetflix</a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item"><a class="nav-link" href="/catalog">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">TV Shows</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Movies</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">New & Popular</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">My List</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Browse by Languages</a></li>
+            </ul>
+
+            <div class="d-flex align-items-center">
+                <span class="icon-btn bi bi-search"></span>
+                <label for="searchInput" class="visually-hidden">Search</label>
+                <input id="searchInput"
+                       type="text"
+                       class="form-control bg-dark text-white border-0 ms-2 search-box"
+                       placeholder="Search..."
+                       disabled
+                />
+
+                <span class="icon-btn bi bi-bell"></span>
+
+                <div class="dropdown ms-3">
+                    <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="avatarMenu"
+                       data-bs-toggle="dropdown">
+                        <img src="/images/netflix_profile.jpg" alt="User" class="rounded user-avatar">
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end text-small shadow">
+                        <li><a class="dropdown-item" href="/profiles_page">Profiles</a></li>
+                        <li><a class="dropdown-item" href="/settings">Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" id="signOutLink">Sign out</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<% if (locals.profileName) { %>
+    <div class="greeting-banner">
+        Hello, <%= profileName %>
+    </div>
+<% } %>
+
+<main class="item-content container-xxl">
+    <section class="video-panel"
+             data-video-type="<%= video.type %>"
+             data-series-id="<%= video.seriesId || '' %>"
+             data-series-title="<%= video.seriesTitle || '' %>"
+             data-episode-number="<%= video.episodeNumber || '' %>">
+        <div class="video-shell" id="videoShell">
+            <video id="detailVideoPlayer" preload="metadata" poster="<%= video.poster %>">
+                <source src="/catalog/video/<%= video.id %>/stream" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <button class="overlay-play" id="overlayPlayButton" type="button">
+                <i class="bi bi-play-fill"></i>
+            </button>
+            <div class="video-controls" id="videoControls">
+                <div class="controls-left">
+                    <button class="control-btn" id="playPauseButton" type="button" aria-label="Play or pause">
+                        <i class="bi bi-play-fill"></i>
+                    </button>
+                    <button class="control-btn skip-btn" id="rewindButton" type="button" aria-label="Rewind 10 seconds">
+                        <span class="skip-indicator">10</span>
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                    <button class="control-btn skip-btn" id="forwardButton" type="button" aria-label="Forward 10 seconds">
+                        <span class="skip-indicator">10</span>
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                    <div class="timeline-group">
+                        <span class="time-label" id="currentTimeLabel">0:00</span>
+                        <input type="range" id="videoSeekBar" min="0" value="0" step="1" aria-label="Video timeline" />
+                        <span class="time-label" id="durationTimeLabel">0:00</span>
+                    </div>
+                </div>
+                <div class="controls-right">
+                    <button class="control-btn d-none" id="nextEpisodeButton" type="button" aria-label="Next episode">
+                        <i class="bi bi-skip-end-fill"></i>
+                    </button>
+                    <button class="control-btn d-none" id="episodeListButton" type="button" aria-label="Episode list" data-bs-toggle="offcanvas" data-bs-target="#episodeDrawer">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <button class="control-btn" id="fullscreenButton" type="button" aria-label="Toggle fullscreen">
+                        <i class="bi bi-arrows-fullscreen"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="video-actions">
+            <button type="button" class="btn btn-lg" id="likeButton">
+                <i class="bi bi-heart-fill me-2"></i>
+                <span id="likeButtonLabel">Like</span>
+            </button>
+            <span class="likes-count">
+                <i class="bi bi-heart-fill text-danger me-1"></i>
+                <span id="likeCount"><%= video.likes ?? 0 %></span>
+            </span>
+        </div>
+    </section>
+
+    <div class="offcanvas offcanvas-end bg-dark text-white" tabindex="-1" id="episodeDrawer" aria-labelledby="episodeDrawerLabel">
+        <div class="offcanvas-header">
+            <h5 id="episodeDrawerLabel">Episodes</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+            <ul class="list-group list-group-flush" id="episodeList"></ul>
+        </div>
+    </div>
+
+    <section class="item-details">
+        <header class="item-header">
+            <h1 class="item-title">
+                <%= video.title %>
+                <% if (video.year) { %>
+                    <span class="item-year"><%= video.year %></span>
+                <% } %>
+            </h1>
+            <% if (video.genres && video.genres.length) { %>
+                <div class="item-genres">
+                    <% video.genres.forEach(function(genre) { %>
+                        <span class="badge text-bg-secondary me-1 mb-1"><%= genre %></span>
+                    <% }); %>
+                </div>
+            <% } %>
+        </header>
+
+        <% if (video.description) { %>
+            <p class="item-description"><%= video.description %></p>
+        <% } %>
+
+        <dl class="item-meta">
+            <% if (video.year) { %>
+                <div>
+                    <dt>Year</dt>
+                    <dd><%= video.year %></dd>
+                </div>
+            <% } %>
+            <% if (video.genres && video.genres.length) { %>
+                <div>
+                    <dt>Genres</dt>
+                    <dd><%= video.genres.join(', ') %></dd>
+                </div>
+            <% } %>
+            <div>
+                <dt>Likes</dt>
+                <dd><span id="metaLikeCount"><%= video.likes ?? 0 %></span></dd>
+            </div>
+            <% if (video.createdAt) { %>
+                <div>
+                    <dt>Added</dt>
+                    <dd><%= new Date(video.createdAt).toLocaleDateString() %></dd>
+                </div>
+            <% } %>
+        </dl>
+    </section>
+
+    <section class="recommendations">
+        <div class="section-header d-flex justify-content-between align-items-center">
+            <h2 class="h4 mb-0">Things you might like</h2>
+            <% if (video.genres && video.genres.length) { %>
+                <span class="text-white-50 small">Based on: <%= video.genres.join(', ') %></span>
+            <% } %>
+        </div>
+        <% if (recommendations && recommendations.length) { %>
+            <div class="row g-4 mt-1">
+                <% recommendations.forEach(function(item) { %>
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <a class="rec-card" href="/catalog/item/<%= item.id %><%= profileId ? ('?profileId=' + encodeURIComponent(profileId)) : '' %>">
+                            <div class="rec-thumb">
+                                <% if (item.poster) { %>
+                                    <img src="<%= item.poster %>" alt="<%= item.title %>">
+                                <% } else { %>
+                                    <div class="rec-thumb-placeholder"></div>
+                                <% } %>
+                            </div>
+                            <div class="rec-body">
+                                <h3 class="rec-title"><%= item.title %></h3>
+                                <% if (item.year) { %>
+                                    <span class="rec-year"><%= item.year %></span>
+                                <% } %>
+                                <% if (item.genres && item.genres.length) { %>
+                                    <div class="rec-genres">
+                                        <% item.genres.slice(0, 3).forEach(function(genre) { %>
+                                            <span class="badge text-bg-dark me-1 mb-1"><%= genre %></span>
+                                        <% }); %>
+                                    </div>
+                                <% } %>
+                                <div class="rec-likes">
+                                    <i class="bi bi-heart-fill text-danger me-1"></i>
+                                    <span><%= item.likes ?? 0 %></span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                <% }); %>
+            </div>
+        <% } else { %>
+            <p class="text-white-50 mt-3">We couldn't find related titles just yet. Check back soon!</p>
+        <% } %>
+    </section>
+</main>
+</body>
+</html>
