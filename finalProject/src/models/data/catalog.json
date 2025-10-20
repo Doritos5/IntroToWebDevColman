@@ -1,108 +1,211 @@
 {
-  "items": [
+  "series": [
     {
-      "id": 1,
-      "title": "The Silent Code",
-      "year": 2024,
-      "genres": [
-        "Thriller",
-        "Sci-Fi"
-      ],
+      "_id": { "$oid": "68ebe6991202368190b11e65" },
+      "__v": 0,
+      "createdAt": { "$date": "2025-10-12T17:34:17.228Z" },
+      "description": "A space exploration saga.",
+      "title": "Galactic Odyssey",
+      "updatedAt": { "$date": "2025-10-12T17:34:17.228Z" },
+      "poster": "https://picsum.photos/seed/odyssey/600/338",
+      "genres": ["Sci-Fi", "Adventure"],
+      "year": 2023
+    }
+  ],
+  "videos": [
+    {
+      "_id": { "$oid": "68ebe6991202368190b11e67" },
+      "__v": 0,
+      "createdAt": { "$date": "2025-10-12T17:34:17.244Z" },
+      "description": "",
+      "genres": ["Thriller", "Sci-Fi"],
+      "legacyId": 1,
       "likes": 133,
-      "poster": "https://picsum.photos/seed/silentcode/600/338"
+      "poster": "https://picsum.photos/seed/silentcode/600/338",
+      "series": null,
+      "title": "The Silent Code",
+      "type": "movie",
+      "updatedAt": { "$date": "2025-10-12T17:34:17.244Z" },
+      "videoPath": "sample.mp4",
+      "year": 2024
     },
     {
-      "id": 2,
-      "title": "Sunset Alley",
-      "year": 2022,
-      "genres": [
-        "Drama"
-      ],
+      "_id": { "$oid": "68ebe6991202368190b11e68" },
+      "__v": 0,
+      "createdAt": { "$date": "2025-10-12T17:34:17.244Z" },
+      "description": "",
+      "genres": ["Drama"],
+      "legacyId": 2,
       "likes": 93,
-      "poster": "https://picsum.photos/seed/sunset/600/338"
+      "poster": "https://picsum.photos/seed/sunset/600/338",
+      "series": null,
+      "title": "Sunset Alley",
+      "type": "movie",
+      "updatedAt": { "$date": "2025-10-12T17:34:17.244Z" },
+      "videoPath": "sample.mp4",
+      "year": 2022
     },
     {
-      "id": 3,
-      "title": "Quantum Heist",
-      "year": 2023,
-      "genres": [
-        "Action",
-        "Sci-Fi"
-      ],
+      "_id": { "$oid": "68ebe6991202368190b11e69" },
+      "__v": 0,
+      "createdAt": { "$date": "2025-10-12T17:34:17.244Z" },
+      "description": "",
+      "genres": ["Action", "Sci-Fi"],
+      "legacyId": 3,
       "likes": 302,
-      "poster": "https://picsum.photos/seed/quantum/600/338"
+      "poster": "https://picsum.photos/seed/quantum/600/338",
+      "series": null,
+      "title": "Quantum Heist",
+      "type": "movie",
+      "updatedAt": { "$date": "2025-10-12T17:34:17.244Z" },
+      "videoPath": "sample.mp4",
+      "year": 2023
     },
     {
-      "id": 4,
-      "title": "Cedar Falls",
-      "year": 2021,
-      "genres": [
-        "Mystery"
-      ],
+      "_id": { "$oid": "68ebe6991202368190b11e6a" },
+      "__v": 0,
+      "createdAt": { "$date": "2025-10-12T17:34:17.244Z" },
+      "description": "",
+      "genres": ["Mystery"],
+      "legacyId": 4,
       "likes": 77,
-      "poster": "https://picsum.photos/seed/cedar/600/338"
+      "poster": "https://picsum.photos/seed/cedar/600/338",
+      "series": null,
+      "title": "Cedar Falls",
+      "type": "movie",
+      "updatedAt": { "$date": "2025-10-12T17:34:17.244Z" },
+      "videoPath": "sample.mp4",
+      "year": 2021
     },
     {
-      "id": 5,
-      "title": "Pixel Hearts",
-      "year": 2020,
-      "genres": [
-        "Romance",
-        "Comedy"
-      ],
+      "_id": { "$oid": "68ebe6991202368190b11e6b" },
+      "__v": 0,
+      "createdAt": { "$date": "2025-10-12T17:34:17.244Z" },
+      "description": "",
+      "genres": ["Romance", "Comedy"],
+      "legacyId": 5,
       "likes": 212,
-      "poster": "https://picsum.photos/seed/pixel/600/338"
+      "poster": "https://picsum.photos/seed/pixel/600/338",
+      "series": null,
+      "title": "Pixel Hearts",
+      "type": "movie",
+      "updatedAt": { "$date": "2025-10-12T17:34:17.244Z" },
+      "videoPath": "sample.mp4",
+      "year": 2020
     },
     {
-      "id": 6,
-      "title": "Desert Line",
-      "year": 2019,
-      "genres": [
-        "Adventure"
-      ],
+      "_id": { "$oid": "68ebe6991202368190b11e6c" },
+      "__v": 0,
+      "createdAt": { "$date": "2025-10-12T17:34:17.244Z" },
+      "description": "",
+      "genres": ["Adventure"],
+      "legacyId": 6,
       "likes": 65,
-      "poster": "https://picsum.photos/seed/desert/600/338"
+      "poster": "https://picsum.photos/seed/desert/600/338",
+      "series": null,
+      "title": "Desert Line",
+      "type": "movie",
+      "updatedAt": { "$date": "2025-10-12T17:34:17.244Z" },
+      "videoPath": "sample.mp4",
+      "year": 2019
     },
     {
-      "id": 7,
+      "_id": { "$oid": "68ebe6991202368190b11e6d" },
+      "__v": 0,
+      "createdAt": { "$date": "2025-10-12T17:34:17.244Z" },
+      "description": "",
+      "genres": ["Documentary"],
+      "legacyId": 7,
+      "likes": 19,
+      "poster": "https://picsum.photos/seed/nordic/600/338",
+      "series": null,
       "title": "Nordic Lights",
-      "year": 2024,
-      "genres": [
-        "Documentary"
-      ],
-      "likes": 18,
-      "poster": "https://picsum.photos/seed/nordic/600/338"
+      "type": "movie",
+      "updatedAt": { "$date": "2025-10-17T16:32:52.311Z" },
+      "videoPath": "sample.mp4",
+      "year": 2024
     },
     {
-      "id": 8,
-      "title": "Crimson Tide",
-      "year": 2018,
-      "genres": [
-        "Action"
-      ],
+      "_id": { "$oid": "68ebe6991202368190b11e6e" },
+      "__v": 0,
+      "createdAt": { "$date": "2025-10-12T17:34:17.244Z" },
+      "description": "",
+      "genres": ["Action"],
+      "legacyId": 8,
       "likes": 154,
-      "poster": "https://picsum.photos/seed/crimson/600/338"
+      "poster": "https://picsum.photos/seed/crimson/600/338",
+      "series": null,
+      "title": "Crimson Tide",
+      "type": "movie",
+      "updatedAt": { "$date": "2025-10-12T17:34:17.244Z" },
+      "videoPath": "sample.mp4",
+      "year": 2018
     },
     {
-      "id": 9,
-      "title": "Byte Me",
-      "year": 2023,
-      "genres": [
-        "Comedy"
-      ],
+      "_id": { "$oid": "68ebe6991202368190b11e6f" },
+      "__v": 0,
+      "createdAt": { "$date": "2025-10-12T17:34:17.245Z" },
+      "description": "",
+      "genres": ["Comedy"],
+      "legacyId": 9,
       "likes": 87,
-      "poster": "https://picsum.photos/seed/byte/600/338"
+      "poster": "https://picsum.photos/seed/byte/600/338",
+      "series": null,
+      "title": "Byte Me",
+      "type": "movie",
+      "updatedAt": { "$date": "2025-10-12T17:34:17.245Z" },
+      "videoPath": "sample.mp4",
+      "year": 2023
     },
     {
-      "id": 10,
-      "title": "Echoes",
-      "year": 2022,
-      "genres": [
-        "Drama",
-        "Mystery"
-      ],
+      "_id": { "$oid": "68ebe6991202368190b11e70" },
+      "__v": 0,
+      "createdAt": { "$date": "2025-10-12T17:34:17.245Z" },
+      "description": "",
+      "genres": ["Drama", "Mystery"],
+      "legacyId": 10,
       "likes": 190,
-      "poster": "https://picsum.photos/seed/echoes/600/338"
+      "poster": "https://picsum.photos/seed/echoes/600/338",
+      "series": null,
+      "title": "Echoes",
+      "type": "movie",
+      "updatedAt": { "$date": "2025-10-12T18:00:33.498Z" },
+      "videoPath": "sample.mp4",
+      "year": 2022
+    },
+    {
+      "_id": { "$oid": "68ebe6991202368190b11e71" },
+      "__v": 0,
+      "createdAt": { "$date": "2025-10-12T17:34:17.245Z" },
+      "description": "A space exploration saga.",
+      "genres": ["Sci-Fi", "Adventure"],
+      "legacyId": 101,
+      "likes": 121,
+      "poster": "https://picsum.photos/seed/odyssey/600/338",
+      "series": { "$oid": "68ebe6991202368190b11e65" },
+      "title": "Into the Void",
+      "type": "series",
+      "updatedAt": { "$date": "2025-10-12T17:35:46.566Z" },
+      "videoPath": "sample.mp4",
+      "year": 2023,
+      "episodeNumber": 1
+    },
+    {
+      "_id": { "$oid": "68ebe6991202368190b11e72" },
+      "__v": 0,
+      "createdAt": { "$date": "2025-10-12T17:34:17.245Z" },
+      "description": "A space exploration saga.",
+      "genres": ["Sci-Fi", "Adventure"],
+      "legacyId": 102,
+      "likes": 98,
+      "poster": "https://picsum.photos/seed/odyssey/600/338",
+      "series": { "$oid": "68ebe6991202368190b11e65" },
+      "title": "The Signal",
+      "type": "series",
+      "updatedAt": { "$date": "2025-10-12T17:34:17.245Z" },
+      "videoPath": "sample.mp4",
+      "year": 2023,
+      "episodeNumber": 2
     }
   ]
 }
