@@ -19,14 +19,6 @@ async function readJsonSafe(filePath) {
     }
 }
 
-function normalizeNumber(value) {
-    const numeric = Number(value);
-    return Number.isFinite(numeric) ? numeric : undefined;
-}
-
-function ensureArray(value) {
-    return Array.isArray(value) ? value : [];
-}
 
 async function populateCatalog() {
     const videoCount = await Video.estimatedDocumentCount();
@@ -40,97 +32,83 @@ async function populateCatalog() {
     const payload = await readJsonSafe(catalogJsonPath) || {};
 
 
-    const movies = ensureArray(payload.movies);
-    const seriesEntries = ensureArray(payload.series);
+    // Helpers
+    const getOid = (maybe) => {
+        // supports {"$oid":"..."} or a plain string
+        if (maybe && typeof maybe === 'object' && typeof maybe.$oid === 'string') return maybe.$oid;
+        if (typeof maybe === 'string') return maybe;
+        return undefined;
+    };
 
-    if (!movies.length && !seriesEntries.length) {
-        console.warn('[Seed] No catalog entries found in JSON seed file.');
-        return;
-    }
+    const toNum = (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : undefined;
+    };
+
+    const arr = (v) => Array.isArray(v) ? v : [];
 
     let movieCount = 0;
     let episodeCount = 0;
 
-    const seriesDocsInput = seriesEntries.map((series) => ({
-        title: series.title,
-        description: series.description || '',
-    }));
-
-    const insertedSeries = seriesDocsInput.length
-        ? await Series.insertMany(seriesDocsInput)
-        : [];
-
-    if (insertedSeries.length) {
-        console.log(`[Seed] Inserted ${insertedSeries.length} series definitions from JSON seed.`);
-    }
-
     const videosToInsert = [];
+    const seriesInsertInputs = [];
+    const originalOidByIndex = [];
 
-    movies.forEach((movie) => {
-        if (!movie || !movie.title) {
-            return;
-        }
 
-        videosToInsert.push({
-            legacyId: normalizeNumber(movie.legacyId ?? movie.id),
-            title: movie.title,
-            description: movie.description || '',
-            year: normalizeNumber(movie.year),
-            genres: ensureArray(movie.genres),
-            poster: movie.poster || '',
-            likes: normalizeNumber(movie.likes) || 0,
-            videoPath: movie.videoPath || 'sample.mp4',
-            type: 'movie',
+    // 1) Insert series and build map from original $oid to new _id
+    for (const s of arr(payload.series)) {
+        seriesInsertInputs.push({
+            title: s.title,
+            description: s.description || '',
         });
-
-        movieCount += 1;
+        originalOidByIndex.push(getOid(s?._id));
+    }
+    const insertedSeries = seriesInsertInputs.length ? await Series.insertMany(seriesInsertInputs) : [];
+    const seriesIdByOriginalOid = new Map();
+    insertedSeries.forEach((doc, i) => {
+        const orig = originalOidByIndex[i];
+        if (orig) seriesIdByOriginalOid.set(orig, doc._id);
     });
 
-    seriesEntries.forEach((series, index) => {
-        const seriesDoc = insertedSeries[index];
-        if (!seriesDoc) {
-            return;
-        }
+    // 2) Insert videos (movies + episodes)
+    for (const v of arr(payload.videos)) {
+        if (!v || !v.title) continue;
 
-        const fallbackPoster = series.poster || '';
-        const fallbackGenres = ensureArray(series.genres);
-        const fallbackVideoPath = series.videoPath || 'sample.mp4';
-        const fallbackYear = normalizeNumber(series.year);
-        const fallbackDescription = series.description || '';
-        const fallbackLikes = normalizeNumber(series.likes) || 0;
+        const base = {
+            legacyId: toNum(v.legacyId ?? v.id),
+            title: v.title,
+            description: v.description || '',
+            year: toNum(v.year),
+            genres: arr(v.genres),
+            poster: v.poster || '',
+            likes: toNum(v.likes) || 0,
+            videoPath: v.videoPath || 'sample.mp4',
+        };
 
-        const episodes = ensureArray(series.episodes);
-        episodes.forEach((episode, episodeIndex) => {
-            if (!episode || !episode.title) {
-                return;
+        if (v.type === 'movie' || v.series === null) {
+            videosToInsert.push({ ...base, type: 'movie' });
+            movieCount += 1;
+        } else if (v.type === 'series') {
+            const seriesOrigOid = getOid(v.series);
+            const seriesNewId = seriesIdByOriginalOid.get(seriesOrigOid);
+            if (!seriesNewId) {
+                console.warn(`[Seed] Skipping episode "${v.title}" – unknown series OID ${seriesOrigOid}`);
+                continue;
             }
-
-            const explicitEpisode = normalizeNumber(episode.episodeNumber);
-            const episodeNumber = explicitEpisode || episodeIndex + 1;
-            const episodeGenres = ensureArray(episode.genres);
-            const resolvedGenres = episodeGenres.length ? episodeGenres : fallbackGenres;
-            const episodeLikes = normalizeNumber(episode.likes);
-            const resolvedLikes = episodeLikes !== undefined ? episodeLikes : fallbackLikes;
-            const episodeYear = normalizeNumber(episode.year);
-            const resolvedYear = episodeYear !== undefined ? episodeYear : fallbackYear;
-
+            const episodeNumber = toNum(v.episodeNumber) || undefined;
             videosToInsert.push({
-                legacyId: normalizeNumber(episode.legacyId ?? episode.id),
-                title: episode.title,
-                description: episode.description || fallbackDescription,
-                year: resolvedYear,
-                genres: resolvedGenres,
-                poster: episode.poster || fallbackPoster,
-                likes: resolvedLikes,
-                videoPath: episode.videoPath || fallbackVideoPath,
+                ...base,
                 type: 'series',
-                series: seriesDoc._id,
+                series: seriesNewId,
                 episodeNumber,
             });
-
             episodeCount += 1;
-        });
-    });
+        } else {
+            // Fallback: treat unknown types as movies
+            videosToInsert.push({ ...base, type: 'movie' });
+            movieCount += 1;
+        }
+    }
 
     if (!videosToInsert.length) {
         console.warn('[Seed] No videos generated from catalog seed data.');
@@ -140,6 +118,7 @@ async function populateCatalog() {
     await Video.insertMany(videosToInsert);
     console.log(`[Seed] Inserted ${movieCount} movies and ${episodeCount} episodes (${videosToInsert.length} videos total) from JSON seed.`);
 }
+
 
 async function populateUsers() {
     const existingCount = await User.estimatedDocumentCount();
@@ -209,7 +188,7 @@ async function populateDB() {
 }
 
 const mongoose = require('mongoose');
-const uri = 'mongodb://127.0.0.1:27017/SuperNetflix';
+const uri = 'mongodb://127.0.0.1:27017/testDor';
 
 mongoose.connect(uri)
     .then(async () => {
