@@ -4,7 +4,7 @@
   "description": "This is the package where we are working on our project",
   "main": "application.js",
   "scripts": {
-    "start": "node /application.js"
+    "start": "node application.js"
   },
   "keywords": [],
   "author": "",
