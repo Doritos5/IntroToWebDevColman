@@ -1,11 +1,12 @@
 const express = require('express');
 const { handleLike, handleUnlike } = require('../controllers/likeController');
-const { isAuthenticated } = require('../middleware/authMiddleware');
+const { ensureAuth } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.post('/like', isAuthenticated, handleLike);
+router.use(ensureAuth);
 
-router.post('/unlike', isAuthenticated, handleUnlike);
+router.post('/like', handleLike);
+router.post('/unlike', handleUnlike);
 
 module.exports = router;

@@ -13,7 +13,7 @@ function resolveVideoPath(relativePath) {
 
 async function renderCatalogPage(req, res, next) {
     try {
-        const userEmail = req.email;
+        const userEmail = req.session.user.email;
 
         const profileId = req.query.profileId;
 
@@ -44,7 +44,7 @@ async function renderVideoDetailPage(req, res, next) {
     try {
         const { videoId } = req.params;
         const { profileId = '' } = req.query;
-        const userEmail = req.email;
+        const userEmail = req.session.user.email;
 
         const video = await catalogModel.findVideoById(videoId);
         if (!video) {
@@ -103,7 +103,7 @@ async function getCatalogByQuery(req, res, next) {
 
 async function getCatalogData(req, res) {
     try {
-        const userEmail = req.email;
+        const userEmail = req.session.user.email;
         const { profileId, page = 1, limit, search = '' } = req.query;
         const videosPerPage = Number(limit || process.env.VIDEOS_PER_PAGE || 12);
         const user = await userModel.findUserByEmail(userEmail);
@@ -201,9 +201,11 @@ async function getVideoProgress(req, res) {
         return res.status(400).json({ message: 'Profile ID is required.' });
     }
 
+    const userEmail = req.session.user.email;
+
     try {
         const progress = await viewingSessionModel.getProgress({
-            userEmail: req.email,
+            userEmail,
             profileId,
             videoId,
         });
@@ -266,7 +268,7 @@ async function updateVideoProgress(req, res) {
 
     try {
         const session = await viewingSessionModel.updateProgress({
-            userEmail: req.email,
+            userEmail: req.session.user.email,
             profileId,
             videoId,
             positionSeconds,
@@ -283,7 +285,6 @@ async function updateVideoProgress(req, res) {
         return res.status(500).json({ message: 'Server error.' });
     }
 }
-
 
 module.exports = {
     renderCatalogPage,
