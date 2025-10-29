@@ -1,7 +1,9 @@
-const crypto = require('crypto');
-const {
+const crypto = require('crypto')
+const bcrypt = require('bcrypt')
+const{
     findUserByEmail,
     createUser,
+    getUserByEmail,
 } = require('../models/userModel');
 const { sanitizeUser } = require('../utils/sanitizers');
 const {
@@ -24,15 +26,25 @@ async function login (req, res) {
     }
 
     try {
-        const user = await findUserByEmail(email);
-        if (!user || user.password !== password) {
-            console.log(`[Auth] Login failed for ${email}`);
-            return res.status(401).json({ message: 'Invalid email or password.' });
+        const user = await getUserByEmail(email);
+        if (!user) {
+            return res.status(401).json({message: 'Invalid email or password.'});
         }
 
-        res.cookie('loggedInUser', user.email, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
-        return res.status(200).json({ message: 'Login successful.', user: sanitizeUser(user) });
+        const ok = await bcrypt.compare(password, user.password);
+        if (!ok) {
+            return res.status(401).json({message: 'Invalid password'});
+        }
 
+        req.session.user = {
+            id: user.id,
+            email: user.email,
+            username: user.username,
+            role: user.role || 'user',
+        };
+
+        const userForClient = sanitizeUser(await findUserByEmail(email));
+        return res.status(200).json({ message: 'Login successful.', user: userForClient });
 
     } catch (error) {
         console.error('[Auth] Login error:', error);
@@ -41,15 +53,10 @@ async function login (req, res) {
 }
 
 async function logout (req, res) {
-    const { email } = req.body || {};
-    if (email) {
-        console.log(`[Auth] ${email} logged out.`);
-    } else {
-        console.log('[Auth] Logout requested without email.');
-    }
-    try { localStorage.removeItem('selectedProfile'); } catch {}
-
-    return res.json({ message: 'Logout successful.' });
+    req.session.destroy(() => {
+        res.clearCookie('connect.sid');
+        return res.redirect('/');
+    });
 }
 
 async function register (req, res) {
@@ -76,7 +83,7 @@ async function register (req, res) {
 
 
     try {
-        const existingUser = await findUserByEmail(email);
+        const existingUser = await getUserByEmail(email);
         if (existingUser) {
             console.log(`[Auth] Registration failed - email already in use: ${email}`);
             return res.status(409).json({ message: 'An account with this email already exists.' });
@@ -96,6 +103,13 @@ async function register (req, res) {
             ],
         };
         const newUserObj = await createUser(userObj);
+
+        req.session.user = {
+            id: newUserObj.id,
+            email: newUserObj.email,
+            username: newUserObj.username,
+            role: newUserObj.role || 'user',
+        };
 
         return res.status(201).json({ message: 'Registration successful.', user: sanitizeUser(newUserObj) });
     } catch (error) {
