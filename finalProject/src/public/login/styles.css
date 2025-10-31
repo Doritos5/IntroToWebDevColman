@@ -4,15 +4,27 @@ body.login-page{
 .bg-hero{
     position:fixed;
     inset:0;
-    background-image:
-            linear-gradient(rgba(0,0,0,.65), rgba(0,0,0,.65)),
-            url("../images/login_background.jpeg");
-
-    background-size:cover;
-    background-position:center;
-    background-repeat:no-repeat;
-    filter:saturate(1.1) contrast(1.05);
+    overflow:hidden;
     z-index:-1;
+}
+
+.bg-hero::before{
+    content: "";
+    position: absolute;
+    width: 200%;
+    height: 200%;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) rotate(340deg);
+    transform-origin: center;
+    background-image:
+            linear-gradient(rgba(0,0,0,.38), rgba(0,0,0,.38)),
+            url("../images/login_background.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    pointer-events: none;
+    will-change: transform;
 }
 
 
