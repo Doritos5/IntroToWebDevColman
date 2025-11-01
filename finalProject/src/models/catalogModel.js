@@ -134,7 +134,7 @@ function toClientSeries(series) {
     return { ...series };
 }
 
-async function getCatalog({ page = 1, limit = 12, search } = {}) {
+async function getCatalog({ page = 1, limit = 12, search, sortBy = 'title' } = {}) {
     const safePage = Math.max(Number(page) || 1, 1);
     const safeLimit = Math.min(Math.max(Number(limit) || 12, 1), 60);
 
@@ -144,8 +144,14 @@ async function getCatalog({ page = 1, limit = 12, search } = {}) {
 
     const skip = (safePage - 1) * safeLimit;
 
+    // Determine sort order
+    let sortOptions = { title: 1 }; // default sort by title ascending
+    if (sortBy === 'popular' || sortBy === 'likes') {
+        sortOptions = { likes: -1, title: 1 }; // sort by likes descending, then by title
+    }
+
     const items = await Video.find(filter)
-        .sort({ title: 1 })
+        .sort(sortOptions)
         .skip(skip)
         .limit(safeLimit)
         .lean({ virtuals: true });

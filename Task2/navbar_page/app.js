@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(!u){location.replace('../profile_page/profilePage.html');return;}
     const b=document.createElement('div');
     b.className='greeting-banner';
-    b.textContent=`Hello "${u}"`;
+    b.textContent=`Hi "${u}"`;
     const nav=document.querySelector('nav.navbar');
     if(nav) nav.insertAdjacentElement('afterend',b); else document.body.prepend(b);
 });
