@@ -134,19 +134,22 @@ function toClientSeries(series) {
     return { ...series };
 }
 
-async function getCatalog({ page = 1, limit = 12, search } = {}) {
+async function getCatalog({ page = 1, limit = 10, offset, search } = {}) {
     const safePage = Math.max(Number(page) || 1, 1);
-    const safeLimit = Math.min(Math.max(Number(limit) || 12, 1), 60);
+    const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 60);
+    const hasOffset = typeof offset !== 'undefined';
+    const safeOffset = hasOffset
+        ? Math.max(Number(offset) || 0, 0)
+        : (safePage - 1) * safeLimit;
 
     const filter = search
         ? { title: { $regex: search.trim(), $options: 'i' } }
         : {};
 
-    const skip = (safePage - 1) * safeLimit;
 
     const items = await Video.find(filter)
         .sort({ title: 1 })
-        .skip(skip)
+        .skip(safeOffset)
         .limit(safeLimit)
         .lean({ virtuals: true });
 
@@ -157,7 +160,8 @@ async function getCatalog({ page = 1, limit = 12, search } = {}) {
     return {
         items: normalized,
         total,
-        page: safePage,
+        page: hasOffset ? Math.floor(safeOffset / safeLimit) + 1 : safePage,
+        offset: safeOffset,
         limit: safeLimit,
     };
 }

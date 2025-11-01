@@ -188,7 +188,7 @@ async function populateDB() {
 }
 
 const mongoose = require('mongoose');
-const uri = 'mongodb://127.0.0.1:27017/testDor';
+const uri = 'mongodb://127.0.0.1:27017/SuperNetflix';
 
 mongoose.connect(uri)
     .then(async () => {
@@ -197,4 +197,5 @@ mongoose.connect(uri)
         console.log('[Seed] Done.');
         mongoose.disconnect();
     })
+
     .catch(err => console.error(err));

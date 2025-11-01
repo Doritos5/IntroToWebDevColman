@@ -9,7 +9,7 @@ function isValidObjectId(id) {
 
 async function handleLike(req, res) {
     const { itemId, profileId } = req.body;
-    const userEmail = req.email;
+    const userEmail = req.session.user.email;
 
     if (!itemId || !profileId) {
         return res.status(400).json({ message: 'Item ID and Profile ID are required.' });
@@ -39,7 +39,7 @@ async function handleLike(req, res) {
 
 async function handleUnlike(req, res) {
     const { itemId, profileId } = req.body;
-    const userEmail = req.email;
+    const userEmail = req.session.user.email;
 
     if (!itemId || !profileId) {
         return res.status(400).json({ message: 'Item ID and Profile ID are required.' });
