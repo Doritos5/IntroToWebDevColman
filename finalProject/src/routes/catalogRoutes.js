@@ -19,7 +19,6 @@ router.get('/item/:videoId', isAuthenticated, renderVideoDetailPage);
 
 router.get('/data', isAuthenticated, getCatalogData);
 
-
 router.get("/search/", isAuthenticated, getCatalogByQuery);
 router.get("/search/:query", isAuthenticated, getCatalogByQuery);
 

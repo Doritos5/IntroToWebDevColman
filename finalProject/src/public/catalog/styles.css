@@ -3,8 +3,35 @@
 
 body.navbar-page {
     margin: 0;
+    position: relative;
     background-color: #000;
     color: #fff;
+}
+
+/* blurred background image */
+body.navbar-page::before{
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background-image: url("../images/catalog_background.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(6px) brightness(0.55);
+    -webkit-filter: blur(6px) brightness(0.55);
+    transform: scale(1.03);
+    pointer-events: none;
+}
+
+/* additional dark overlay to guarantee contrast for content */
+body.navbar-page::after{
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: rgba(0,0,0,0.5);
+    pointer-events: none;
 }
 .navbar {
     background-color: rgba(0,0,0,0.72);
@@ -38,6 +65,10 @@ body.navbar-page {
 }
 .nav-link:hover {
     text-decoration: underline;
+}
+.nav-link.active {
+    color: #e50914 !important;
+    font-weight: 600;
 }
 .icon-btn {
     margin-left: 1rem;
