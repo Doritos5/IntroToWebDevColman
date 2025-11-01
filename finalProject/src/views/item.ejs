@@ -42,7 +42,11 @@
                        disabled
                 />
 
-                <span class="icon-btn bi bi-bell"></span>
+                <% if (locals.profileName) { %>
+                    <div class="greeting-banner nav-greeting ms-3">
+                        Hi, <%= profileName %>
+                    </div>
+                <% } %>
 
                 <div class="dropdown ms-3">
                     <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="avatarMenu"
@@ -60,12 +64,6 @@
         </div>
     </div>
 </nav>
-
-<% if (locals.profileName) { %>
-    <div class="greeting-banner">
-        Hello, <%= profileName %>
-    </div>
-<% } %>
 
 <main class="item-content container-xxl">
     <section class="video-panel"

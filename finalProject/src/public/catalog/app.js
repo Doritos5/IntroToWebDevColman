@@ -57,7 +57,7 @@ function ensureProfileSelected() {
     }
 
     if (greetingBanner) {
-        greetingBanner.textContent = `Hello, ${profileName}`;
+        greetingBanner.textContent = `Hi, ${profileName}`;
     }
 
     return { selectedProfileId, profileName };

@@ -23,7 +23,7 @@
 
 <nav class="navbar navbar-expand-lg fixed-top">
     <div class="container-fluid">
-        <a class="navbar-brand" href="#">SuperNetflix</a>
+    <a class="navbar-brand brand" href="/catalog">Streamix</a>
 
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
@@ -44,7 +44,11 @@
                        placeholder="Search..."
                 />
 
-                <span class="icon-btn bi bi-bell"></span>
+                <% if (locals.profileName) { %>
+                    <div class="greeting-banner nav-greeting ms-3">
+                        Hi, <%= profileName %>
+                    </div>
+                <% } %>
 
                 <div class="dropdown ms-3">
                     <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="avatarMenu" data-bs-toggle="dropdown">
@@ -61,13 +65,6 @@
         </div>
     </div>
 </nav>
-
-<% if (locals.profileName) { %>
-    <div class="greeting-banner">
-        Hello, <%= profileName %>
-    </div>
-<% } %>
-
 
 <main class="container-xxl">
     <header class="mb-4">
