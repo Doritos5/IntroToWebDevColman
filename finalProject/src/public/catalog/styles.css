@@ -59,16 +59,39 @@ body.navbar-page::after{
         vertical-align: middle;
 }
 
+.navbar-nav {
+    margin-left: 3rem !important;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+}
+
 .nav-link {
     color: #fff !important;
     margin-right: 1rem;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 0.5rem 0.75rem;
 }
-.nav-link:hover {
-    text-decoration: underline;
+.nav-link:hover:not(.active) {
+    text-decoration: none;
+    transform: scale(1.1);
 }
 .nav-link.active {
-    color: #e50914 !important;
     font-weight: 600;
+    font-size: 1.15rem;
+    color: #fff !important;
+    text-shadow: 
+        0 0 6px rgba(229, 9, 20, 1),
+        0 0 12px rgba(229, 9, 20, 0.8),
+        0 0 18px rgba(229, 9, 20, 0.6),
+        0 0 24px rgba(229, 9, 20, 0.4);
 }
 .icon-btn {
     margin-left: 1rem;
