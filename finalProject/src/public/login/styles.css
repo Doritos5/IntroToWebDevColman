@@ -4,15 +4,27 @@ body.login-page{
 .bg-hero{
     position:fixed;
     inset:0;
-    background-image:
-            linear-gradient(rgba(0,0,0,.65), rgba(0,0,0,.65)),
-            url("../images/login_background.jpeg");
-
-    background-size:cover;
-    background-position:center;
-    background-repeat:no-repeat;
-    filter:saturate(1.1) contrast(1.05);
+    overflow:hidden;
     z-index:-1;
+}
+
+.bg-hero::before{
+    content: "";
+    position: absolute;
+    width: 200%;
+    height: 200%;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) rotate(340deg);
+    transform-origin: center;
+    background-image:
+            linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.45)),
+            url("../images/login_background.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    pointer-events: none;
+    will-change: transform;
 }
 
 
@@ -20,13 +32,42 @@ body.login-page{
     position:fixed;
     top:18px;
     left:24px;
-    font-weight:900;
-    letter-spacing:.05em;
-    font-size:32px;
+    font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, system-ui, -apple-system, sans-serif;
+    font-weight:600;
+    letter-spacing:.12em;
+    font-size:40px;
+    text-transform:uppercase;
     color: red;
+    -webkit-text-stroke: 0.6px rgba(0,0,0,0.85);
+    text-shadow: 0 0 1px rgba(0,0,0,0.85), 0 1px 2px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.35);
 
     /* So we can't select the text with the mouse, it acts like an image */
     user-select:none;
+
+        /* subtle one-time glow animation on page load */
+        animation: brand-glow 1.6s ease-in-out 0s 1 both;
+        will-change: text-shadow, transform;
+}
+
+/* keyframes for the brand glow */
+@keyframes brand-glow{
+    0%{
+        transform: translateY(0) scale(1);
+        text-shadow: 0 0 0 rgba(0,0,0,0.85), 0 1px 2px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.35);
+    }
+    50%{
+        transform: translateY(-2px) scale(1.02);
+        text-shadow: 0 0 10px rgba(229,9,20,0.95), 0 0 24px rgba(229,9,20,0.6), 0 6px 30px rgba(0,0,0,0.35);
+    }
+    100%{
+        transform: translateY(0) scale(1);
+        text-shadow: 0 0 1px rgba(0,0,0,0.85), 0 1px 2px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.35);
+    }
+}
+
+/* respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .brand { animation: none !important; }
 }
 
 .login-card{
@@ -35,6 +76,14 @@ body.login-page{
     background: rgba(0,0,0,.75);
     border-radius: 8px;
     padding: 40px 55px 36px;
+}
+
+/* Center only the login title inside the card */
+.login-card > h1,
+.login-card h1{
+    text-align: center;
+    font-weight: 300;
+    letter-spacing: 0.02em;
 }
 
 .form-control{

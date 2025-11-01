@@ -20,23 +20,23 @@
 <body class="login-page">
 <div class="bg-hero"></div>
 
-<div class="brand">SuperNetflix</div>
+<div class="brand">Streamix</div>
 
 <main class="page-wrap">
     <section class="login-card">
-        <h1 class="mb-4 fw-bold">Account login</h1>
+        <h1 class="mb-4">Account login</h1>
 
         <!--        <form id="login-form" novalidate action="/login" method="POST">-->
         <form id="login-form" novalidate>
             <div class="mb-3">
-                <label for="email" class="form-label">Email</label>
-                <input type="email" class="form-control" id="email" placeholder="name@example.com" />
+                <label for="email" class="form-label visually-hidden">Email</label>
+                <input type="email" class="form-control" id="email" placeholder="Email" />
                 <small id="emailError" class="text-danger d-none"> <!-- Bootstrap class for red text, hidden by default. -->
                     Email must be at least 3 characters and contain only english letters/numbers.
                 </small>
             </div>
             <div class="mb-2">
-                <label for="password" class="form-label">Password</label>
+                <label for="password" class="form-label visually-hidden">Password</label>
                 <input type="password" class="form-control" id="password" placeholder="Password" />
                 <small id="passwordError" class="text-danger d-none"> <!-- Bootstrap class for red text, hidden by default. -->
                     Password must be at least 6 characters.
