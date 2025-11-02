@@ -1,19 +1,13 @@
 const dotenv = require('dotenv');
 const r = dotenv.config();
-
-
 const path = require('path');
 const express = require('express');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 
-if (!process.env.MONGODB_URI) {
-    console.error('Missing MONGODB_URI in .env'); process.exit(1);
-}
 if (!process.env.SESSION_SECRET) {
     console.error('Missing SESSION_SECRET in .env'); process.exit(1);
 }
-
 
 const authRoutes = require('./src/routes/authRoutes');
 const catalogRoutes = require('./src/routes/catalogRoutes');
@@ -41,30 +35,23 @@ app.set('views', path.join(__dirname, 'src', 'views'));
 
 const { MONGODB_URI, SESSION_SECRET, NODE_ENV } = process.env;
 
-if (!SESSION_SECRET || !MONGODB_URI) {
-    console.error('Missing SESSION_SECRET or MONGODB_URI in .env');
-    process.exit(1);
-}
-
 app.use(session({
-    secret: SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({ mongoUrl: MONGODB_URI }),
+    secret: SESSION_SECRET, // Signs the session ID cookie
+    resave: false,  // Don't save session if unmodified
+    saveUninitialized: false, // Don't create sessions for unauthenticated users
+    store: MongoStore.create({ mongoUrl: MONGODB_URI }),   // Use MongoDB to store sessions
     cookie: {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: NODE_ENV === 'production',
-        maxAge: 1000 * 60 * 60 * 24
+        httpOnly: true,    // Prevents client-side JS from reading the cookie
+        sameSite: 'lax',   // Helps prevent CSRF attacks
+        secure: NODE_ENV === 'production',  // Ensures cookie is only sent over HTTPS in production
+        maxAge: 1000 * 60 * 60 * 24  // Sets cookie expiration to 1 day
     }
 }));
-
 
 app.use('/', authRoutes);
 app.use('/catalog', catalogRoutes);
 app.use('/profiles', profileRoutes);
 app.use('/likes', likeRoutes);
-
 
 async function startServer() {
     try {

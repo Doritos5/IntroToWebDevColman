@@ -15,16 +15,12 @@ const {
 
 const { ensureAuth, ensureAdmin } = require('../middleware/authMiddleWare');
 
+router.use(ensureAuth);
 router.get('/', renderCatalogPage);
 router.get('/item/:videoId', renderVideoDetailPage);
-
-
 router.get('/data', getCatalogData);
-
-
 router.get("/search/",  getCatalogByQuery);
 router.get("/search/:query",  getCatalogByQuery);
-
 router.get('/video/:videoId/stream', streamVideo);
 router.get('/video/:videoId/progress',  getVideoProgress);
 router.get('/video/:videoId/next', getNextVideo);

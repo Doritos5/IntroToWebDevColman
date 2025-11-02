@@ -3,6 +3,7 @@ const {
     login,
     logout,
     register,
+    renderSettingsPage,
 } = require('../controllers/authController');
 const { ensureAuth } = require('../middleware/authMiddleware');
 
@@ -16,17 +17,17 @@ router.get('/', (req, res) => {
 router.post('/login', login);
 router.post('/logout', logout);
 router.get('/register', (req, res) => {
-    if (req.session?.user) return res.redirect('/profiles_page');
-    res.render('register');
+    if (req.session?.user) {
+        return res.status(403).json({ message: 'You are already logged in.' });
+    }
+    res.render("register");
 });
 router.post('/register', register);
 
-router.get('/profiles_page', ensureAuth, (req, res) => {
+router.get('/profiles_page', ensureAuth, (req, res, next) => {
     res.render('profilePage');
 });
 
-router.get('/settings', ensureAuth, (req, res) => {
-    res.render('settings'); // This will render the views/settings.ejs file
-});
+router.get('/settings', ensureAuth, renderSettingsPage);
 
 module.exports = router;

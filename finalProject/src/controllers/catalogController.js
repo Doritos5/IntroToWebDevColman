@@ -14,27 +14,21 @@ function resolveVideoPath(relativePath) {
 async function renderCatalogPage(req, res, next) {
     try {
         const userEmail = req.session.user.email;
-
         const profileId = req.query.profileId;
-
-        const user = await userModel.findUserByEmail(userEmail);
-
+        const user = await userModel.getUserByEmail(userEmail, { hydrate: true });
         let profileName = '';
-        if (user && profileId) {
+        if (user && user.profiles && profileId) {
             const profile = user.profiles.find(p => p.id === profileId);
             if (profile) {
                 profileName = profile.displayName;
             }
         }
-
         const videosPerPage = Number(process.env.VIDEOS_PER_PAGE || 12);
-
         res.render('catalog', {
             catalogFeed: '',
             profileName,
             videosPerPage,
         });
-
     } catch (error) {
         next(error);
     }
@@ -45,19 +39,15 @@ async function renderVideoDetailPage(req, res, next) {
         const { videoId } = req.params;
         const { profileId = '' } = req.query;
         const userEmail = req.session.user.email;
-
         const video = await catalogModel.findVideoById(videoId);
         if (!video) {
             return res.status(404).send('Video not found.');
         }
-
-        const user = await userModel.findUserByEmail(userEmail);
-
+        const user = await userModel.getUserByEmail(userEmail, { hydrate: true });
         let profileName = '';
         let likedContent = [];
         let isLiked = false;
-
-        if (user && profileId) {
+        if (user && user.profiles && profileId) {
             const profile = user.profiles.find((p) => p.id === profileId);
             if (profile) {
                 profileName = profile.displayName;
@@ -65,13 +55,11 @@ async function renderVideoDetailPage(req, res, next) {
                 isLiked = likedContent.includes(video.id);
             }
         }
-
         const recommendations = await catalogModel.findRecommendationsByGenres({
             genres: video.genres,
             excludeId: video.id,
             limit: 8,
         });
-
         res.render('item', {
             video,
             profileName,
@@ -106,22 +94,19 @@ async function getCatalogData(req, res) {
         const userEmail = req.session.user.email;
         const { profileId, page = 1, limit, search = '' } = req.query;
         const videosPerPage = Number(limit || process.env.VIDEOS_PER_PAGE || 12);
-        const user = await userModel.findUserByEmail(userEmail);
-
+        const user = await userModel.getUserByEmail(userEmail, { hydrate: true });
         let likedContent = [];
-        if (user && profileId) {
+        if (user && user.profiles && profileId) {
             const profile = user.profiles.find(p => p.id === profileId);
             if (profile) {
                 likedContent = profile.likeContent || [];
             }
         }
-
         const catalog = await catalogModel.getCatalog({
             page,
             limit: videosPerPage,
             search,
         });
-
         res.json({
             catalog: catalog.items,
             likedContent,
@@ -130,7 +115,6 @@ async function getCatalogData(req, res) {
             totalPages: Math.ceil(catalog.total / catalog.limit),
             limit: catalog.limit,
         });
-
     } catch (error) {
         console.error('Error fetching catalog data:', error);
         res.status(500).json({ message: 'Server error' });
