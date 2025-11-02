@@ -2,7 +2,8 @@ const { findUserByEmail, updateProfile, addProfileToUser } = require('../models/
 
 async function getUserProfiles(req, res) {
     try {
-        const user = await findUserByEmail(req.email);
+        const userEmail = req.session.user.email;
+        const user = await findUserByEmail(userEmail);
         if (user && user.profiles) {
             return res.json(user.profiles);
         }
@@ -16,7 +17,7 @@ async function getUserProfiles(req, res) {
 async function updateProfileName(req, res) {
     const { profileId } = req.params;
     const { displayName } = req.body;
-    const userEmail = req.email;
+    const userEmail = req.session.user.email;
 
     if (!displayName) {
         return res.status(400).json({ message: 'New display name is required.' });
@@ -38,13 +39,21 @@ async function updateProfileName(req, res) {
 
 async function createNewProfile(req, res) {
     const { profileName } = req.body;
-    const userEmail = req.email;
+    const userEmail = req.session.user.email;
 
     if (!profileName || profileName.trim().length < 1) {
         return res.status(400).json({ message: 'Profile name is required.' });
     }
 
     try {
+        const user = await findUserByEmail(userEmail);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+        if (user.profiles && user.profiles.length >= 5) {
+            return res.status(400).json({ message: 'Maximum of 5 profiles per user allowed.' });
+        }
         const newProfile = await addProfileToUser(userEmail, profileName.trim());
         return res.status(201).json({ message: 'Profile created successfully!', profile: newProfile });
     } catch (error) {
