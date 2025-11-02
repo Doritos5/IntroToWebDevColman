@@ -608,28 +608,40 @@ function ensureContentFill() {
 
     if (scrollHeight - clientHeight < 200) {
         fetchCatalogPage();
-function resetFeed() {
-    currentPage = 0;
-    totalPages = Infinity;
-    sentinel?.classList.remove('hidden');
+    }
+}
+
+function resetFeedForSort() {
+    nextOffset = 0;
+    totalItems = Infinity;
+    isFirstBatch = true;
+    feed.innerHTML = '';
+    videoCache = new Map();
+    setLoadingState(false);
+    if (sentinel) {
+        sentinel.classList.remove('hidden');
+    }
+    if (observer && sentinel) {
+        observer.observe(sentinel);
+    }
 }
 
 async function setSortBy(sortBy) {
+    console.log(`Setting sort by: ${sortBy}, current: ${activeSortBy}`);
     if (activeSortBy !== sortBy) {
         activeSortBy = sortBy;
         
-        // Reset pagination but keep current content visible
-        resetFeed();
-        
         try {
-            // Fetch new content
+            // Fetch new content while keeping current content visible (no stutter)
             const profileData = ensureProfileSelected();
             if (!profileData) return;
 
             isLoading = true;
+            setLoadingState(true);
+            
             const params = new URLSearchParams({
-                page: '1',
-                limit: String(pageSize),
+                offset: '0',
+                limit: String(standardLoadSize || 5),
                 profileId: profileData.selectedProfileId,
             });
 
@@ -641,27 +653,39 @@ async function setSortBy(sortBy) {
                 params.set('sortBy', activeSortBy);
             }
 
+            console.log('Fetching catalog with new sort...');
             const response = await fetch(`/catalog/data?${params.toString()}`);
             if (response.ok) {
                 const data = await response.json();
                 
-                // Replace content atomically
+                // Atomically replace content to prevent stutter
                 feed.innerHTML = '';
                 updateLikedIds(data.likedContent);
                 appendVideos(data.catalog || []);
 
-                currentPage = data.page || 1;
-                totalPages = data.totalPages || totalPages;
+                // Reset pagination state for new sort
+                nextOffset = (data.catalog || []).length;
+                const totalFromResponse = Number(data.total);
+                totalItems = Number.isFinite(totalFromResponse) ? totalFromResponse : Infinity;
+                isFirstBatch = false;
 
-                if (currentPage >= totalPages) {
+                if (nextOffset >= totalItems) {
                     sentinel?.classList.add('hidden');
+                } else {
+                    sentinel?.classList.remove('hidden');
                 }
+            } else {
+                throw new Error('Failed to load catalog with new sort');
             }
+            
         } catch (error) {
-            console.error(error);
+            console.error('Error in setSortBy:', error);
         } finally {
             isLoading = false;
+            setLoadingState(false);
         }
+    } else {
+        console.log('Sort already active, skipping...');
     }
 }
 

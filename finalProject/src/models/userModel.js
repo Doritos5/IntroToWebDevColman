@@ -83,7 +83,7 @@ async function createUser(userData) {
     if (!id) throw new Error('Missing required field: id');
     if (!email) throw new Error('Missing required field: email');
     if (!username) throw new Error('Missing required field: username');
-    if (!password || password.length < 8) throw new Error('Password must be at least 8 characters');
+    if (!password || password.length < 6) throw new Error('Password must be at least 6 characters');
 
     const hash = await bcrypt.hash(password, 12);
 
@@ -134,7 +134,7 @@ async function getUserByEmail(email) {
 }
 
 async function updateUserPassword(id, newPlainPassword) {
-    if (!id || !newPlainPassword || newPlainPassword.length < 8) {
+    if (!id || !newPlainPassword || newPlainPassword.length < 6) {
         throw new Error('Invalid password update');
     }
     const user = await User.findOne({ id });

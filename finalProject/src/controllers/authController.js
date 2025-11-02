@@ -77,7 +77,7 @@ async function register (req, res) {
     }
     if (!isValidPassword(password)) {
         console.log('[Auth] Registration failed - weak password.');
-        return res.status(400).json({ message: 'Password must be at least 3 characters long.' });
+        return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
     }
 
 
