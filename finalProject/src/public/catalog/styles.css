@@ -3,12 +3,39 @@
 
 body.navbar-page {
     margin: 0;
+    position: relative;
     background-color: #000;
     color: #fff;
 }
-.navbar {
-    background: url("../images/secondBackround.jpg") no-repeat center center;
+
+/* blurred background image */
+body.navbar-page::before{
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background-image: url("../images/catalog_background.jpg");
     background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(6px) brightness(0.55);
+    -webkit-filter: blur(6px) brightness(0.55);
+    transform: scale(1.03);
+    pointer-events: none;
+}
+
+/* additional dark overlay to guarantee contrast for content */
+body.navbar-page::after{
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: rgba(0,0,0,0.5);
+    pointer-events: none;
+}
+.navbar {
+    background-color: rgba(0,0,0,0.72);
+    backdrop-filter: saturate(120%) blur(6px);
 }
 .navbar-brand {
     font-weight: 900;
@@ -17,16 +44,80 @@ body.navbar-page {
     letter-spacing: 1px;
     text-transform: uppercase;
 }
+
+.navbar-brand.brand {
+        font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, system-ui, -apple-system, sans-serif;
+        font-weight: 600;
+        letter-spacing: .12em;
+        font-size: 28px;
+        text-transform: uppercase;
+        color: red !important;
+        -webkit-text-stroke: 0.6px rgba(0,0,0,0.85);
+        text-shadow: 0 0 1px rgba(0,0,0,0.85), 0 1px 2px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.35);
+        user-select: none;
+        display: inline-block;
+        vertical-align: middle;
+}
+
+.navbar-nav {
+    margin-left: 3rem !important;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+}
+
 .nav-link {
     color: #fff !important;
     margin-right: 1rem;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 0.5rem 0.75rem;
 }
-.nav-link:hover {
-    text-decoration: underline;
+.nav-link:hover:not(.active) {
+    text-decoration: none;
+    transform: scale(1.1);
+}
+.nav-link.active {
+    font-weight: 600;
+    font-size: 1.15rem;
+    color: #fff !important;
+    text-shadow: 
+        0 0 6px rgba(229, 9, 20, 1),
+        0 0 12px rgba(229, 9, 20, 0.8),
+        0 0 18px rgba(229, 9, 20, 0.6),
+        0 0 24px rgba(229, 9, 20, 0.4);
 }
 .icon-btn {
     margin-left: 1rem;
     cursor: pointer;
+}
+.navbar .dropdown-toggle {
+    color: #fff !important; /* make the overflow/menu toggle icon/text white */
+}
+.navbar .dropdown-toggle::after {
+    /* caret color (Bootstrap) — ensure it's visible on dark bg */
+    border-top-color: #fff !important;
+}
+
+/* Invert dropdown menu colors: black background with white text */
+.dropdown-menu {
+    background-color: #000 !important;
+    color: #fff !important;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+.dropdown-menu .dropdown-item {
+    color: #fff !important;
+}
+.dropdown-menu .dropdown-item:hover,
+.dropdown-menu .dropdown-item:focus {
+    background: rgba(255,255,255,0.06);
+    color: #fff !important;
 }
 .user-avatar {
     width: 28px;
@@ -90,6 +181,28 @@ main {
     position:relative;z-index:1020;background:rgba(0,0,0,.6);
     color:#fff;padding:.75rem 1rem;font-weight:600;
     border-bottom:1px solid rgba(255,255,255,.15);margin-top:56px;
+}
+
+.navbar .nav-greeting {
+    display: inline-block;
+    margin-top: 0; /* override page-level banner spacing */
+    background: transparent;
+    border-bottom: none;
+    padding: .15rem .5rem;
+    color: rgba(255,255,255,0.95);
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.navbar .nav-greeting {
+    display: inline-block;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
 }
 
 #feedSentinel {
@@ -316,13 +429,12 @@ main {
     background: rgba(229, 9, 20, 1);
 }
 
-@media (max-width: 768px) {
-    .video-controls {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0.75rem;
-    }
+@media (max-width: 420px) {
+    /* hide greeting on very small screens to avoid layout break */
+    .navbar .nav-greeting { display: none; }
+}
 
+@media (max-width: 768px) {
     .video-controls .controls-left,
     .video-controls .controls-right {
         justify-content: center;

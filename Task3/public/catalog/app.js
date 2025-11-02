@@ -35,7 +35,7 @@ async function initializeCatalog() {
         return;
     }
     if (greetingBanner) {
-        greetingBanner.textContent = `Hello, ${profileName}`;
+        greetingBanner.textContent = `Hi, ${profileName}`;
     }
 
     const response = await fetch(`/catalog/data?profileId=${selectedProfileId}`);
