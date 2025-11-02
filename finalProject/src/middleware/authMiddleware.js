@@ -1,8 +1,10 @@
 const { Profile } = require('../models/profileModel');
 const { User } = require('../models/userModel');
 async function ensureAuth(req, res, next) {
+    console.log('[ensureAuth] Session check:', req.session?.user?.id ? 'User ID found' : 'No user ID');
     const userId = req.session?.user?.id;
     if (!userId) {
+        console.log('[ensureAuth] Authentication failed - no user ID in session');
         return res.status(401).json({ message: 'login required' });
     }
     try {
