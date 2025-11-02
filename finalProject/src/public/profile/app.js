@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const profilesContainer = document.querySelector('.profiles-wrap');
+    const profilesContainer = document.querySelector('.profiles-grid') || document.querySelector('.profiles-wrap');
 
     function createProfileHTML(profile) {
         return `
@@ -8,32 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button type="submit" class="profile-btn" aria-label="${profile.displayName}">
                         <img src="${profile.avatar}" alt="${profile.displayName}" class="avatar">
                     </button>
-                    <label for="edit-${profile.id}" class="edit-toggle" aria-label="Edit name">
-                        <svg viewBox="0 0 24 24" class="edit-icon"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm14.71-9.04c.39-.39.39-1.02 0-1.41l-2.12-2.12a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.61-1.61z"/></svg>
-                    </label>
                 </form>
-                <input type="checkbox" id="edit-${profile.id}" class="edit-check" style="display: none;">
-                <input type="text" class="profile-name-input" value="${profile.displayName}" data-profile-id="${profile.id}">
                 <div class="profile-caption">${profile.displayName}</div>
             </div>
         `;
-    }
-
-    function saveProfileName(profileId, displayName) {
-        fetch(`/profiles/${profileId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ displayName: displayName })
-        })
-            .then(res => {
-                if (!res.ok) {
-                    console.error('Failed to save profile name');
-                }
-                return res.json();
-            })
-            .then(data => {
-                console.log('Server response:', data.message);
-            });
     }
 
     profilesContainer.addEventListener('submit', (e) => {
@@ -52,23 +30,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    profilesContainer.addEventListener('change', (e) => {
-        if (e.target.classList.contains('edit-check')) {
-            const checkbox = e.target;
-            const profileContainer = checkbox.closest('.text-center');
-            const textInput = profileContainer.querySelector('.profile-name-input');
-            const profileId = textInput.dataset.profileId;
+    // Delegate clicks on the profile name/caption so clicking the name behaves like clicking the card/button
+    profilesContainer.addEventListener('click', (e) => {
+        const target = e.target;
 
-            if (!checkbox.checked) {
-                const newDisplayName = textInput.value;
-
-                saveProfileName(profileId, newDisplayName);
-
-                const caption = profileContainer.querySelector('.profile-caption');
-                if (caption) {
-                    caption.textContent = newDisplayName;
+        // handle anchor-based cards (name inside anchor will already navigate)
+        if (target.classList && (target.classList.contains('profile-name') || target.classList.contains('profile-caption'))) {
+            // Find nearest .text-center wrapper (server variant) or nearest .profile-card (anchor)
+            const textCenter = target.closest('.text-center');
+            if (textCenter) {
+                const form = textCenter.querySelector('.profile-form');
+                if (form) {
+                    // emulate submit behavior
+                    const profileId = form.dataset.profileId;
+                    const name = textCenter.querySelector('.profile-caption')?.textContent || target.textContent;
+                    try { localStorage.setItem('selectedProfileName', name); localStorage.setItem('selectedProfileId', profileId); } catch (e) {}
+                    window.location.href = `/catalog?profileId=${profileId}`;
+                    return;
                 }
             }
+
+            // If inside an anchor-based card, clicking the name will bubble and the anchor handles navigation.
         }
     });
 

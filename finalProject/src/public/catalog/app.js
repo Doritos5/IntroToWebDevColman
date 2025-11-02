@@ -37,6 +37,7 @@ let totalItems = Infinity;
 let isFirstBatch = true;
 let isLoading = false;
 let activeSearchTerm = '';
+let activeSortBy = 'title';
 let likedIds = new Set();
 let observer;
 let modalInstance;
@@ -65,7 +66,7 @@ function ensureProfileSelected() {
     }
 
     if (greetingBanner) {
-        greetingBanner.textContent = `Hello, ${profileName}`;
+        greetingBanner.textContent = `Hi, ${profileName}`;
     }
 
     return { selectedProfileId, profileName };
@@ -516,6 +517,10 @@ async function fetchCatalogPage() {
         params.set('search', activeSearchTerm);
     }
 
+    if (activeSortBy && activeSortBy !== 'title') {
+        params.set('sortBy', activeSortBy);
+    }
+
     try {
         const response = await fetch(`/catalog/data?${params.toString()}`);
         if (!response.ok) {
@@ -603,6 +608,60 @@ function ensureContentFill() {
 
     if (scrollHeight - clientHeight < 200) {
         fetchCatalogPage();
+function resetFeed() {
+    currentPage = 0;
+    totalPages = Infinity;
+    sentinel?.classList.remove('hidden');
+}
+
+async function setSortBy(sortBy) {
+    if (activeSortBy !== sortBy) {
+        activeSortBy = sortBy;
+        
+        // Reset pagination but keep current content visible
+        resetFeed();
+        
+        try {
+            // Fetch new content
+            const profileData = ensureProfileSelected();
+            if (!profileData) return;
+
+            isLoading = true;
+            const params = new URLSearchParams({
+                page: '1',
+                limit: String(pageSize),
+                profileId: profileData.selectedProfileId,
+            });
+
+            if (activeSearchTerm) {
+                params.set('search', activeSearchTerm);
+            }
+
+            if (activeSortBy && activeSortBy !== 'title') {
+                params.set('sortBy', activeSortBy);
+            }
+
+            const response = await fetch(`/catalog/data?${params.toString()}`);
+            if (response.ok) {
+                const data = await response.json();
+                
+                // Replace content atomically
+                feed.innerHTML = '';
+                updateLikedIds(data.likedContent);
+                appendVideos(data.catalog || []);
+
+                currentPage = data.page || 1;
+                totalPages = data.totalPages || totalPages;
+
+                if (currentPage >= totalPages) {
+                    sentinel?.classList.add('hidden');
+                }
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            isLoading = false;
+        }
     }
 }
 
@@ -621,6 +680,17 @@ function handleSearchInput(event) {
     }
 
     activeSearchTerm = newTerm;
+    
+    // Reset sort to title when searching
+    if (activeSortBy !== 'title') {
+        activeSortBy = 'title';
+        // Update navigation styling
+        const homeLink = document.getElementById('homeLink');
+        const mostPopularLink = document.getElementById('mostPopularLink');
+        homeLink?.classList.add('active');
+        mostPopularLink?.classList.remove('active');
+    }
+    
     resetFeed();
     fetchCatalogPage();
 }
@@ -931,6 +1001,30 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchCatalogPage();
 
     feed.addEventListener('click', handleFeedClick);
+
+    // Navigation links
+    const homeLink = document.getElementById('homeLink');
+    const mostPopularLink = document.getElementById('mostPopularLink');
+    
+    homeLink?.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Only process if not already active
+        if (!homeLink.classList.contains('active')) {
+            setSortBy('title');
+            homeLink.classList.add('active');
+            mostPopularLink?.classList.remove('active');
+        }
+    });
+    
+    mostPopularLink?.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Only process if not already active
+        if (!mostPopularLink.classList.contains('active')) {
+            setSortBy('popular');
+            mostPopularLink.classList.add('active');
+            homeLink?.classList.remove('active');
+        }
+    });
 
     searchIcon?.addEventListener('click', toggleSearchInput);
     searchInput?.addEventListener('input', handleSearchInput);

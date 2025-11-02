@@ -18,9 +18,7 @@ const { ensureAuth, ensureAdmin } = require('../middleware/authMiddleWare');
 router.get('/', renderCatalogPage);
 router.get('/item/:videoId', renderVideoDetailPage);
 
-
 router.get('/data', getCatalogData);
-
 
 router.get("/search/",  getCatalogByQuery);
 router.get("/search/:query",  getCatalogByQuery);

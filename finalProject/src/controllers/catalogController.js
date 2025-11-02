@@ -142,13 +142,13 @@ async function getCatalogByQuery(req, res, next) {
 async function getCatalogData(req, res) {
     try {
         const userEmail = req.session.user.email;
-        const { profileId, page = 1, limit, offset, search = '' } = req.query;
         const configuredPageSize = getConfiguredPageSize();
         const videosPerPage = typeof limit !== 'undefined'
             ? normalizePageSize(limit, configuredPageSize)
             : configuredPageSize;
         const hasOffset = typeof offset !== 'undefined';
         const normalizedOffset = hasOffset ? normalizeOffset(offset) : undefined;
+        const { profileId, page = 1, limit, offset, search = '', sortBy = 'title' } = req.query;
         const user = await userModel.findUserByEmail(userEmail);
 
         let likedContent = [];
@@ -164,6 +164,7 @@ async function getCatalogData(req, res) {
             offset: normalizedOffset,
             limit: videosPerPage,
             search,
+            sortBy,
         });
 
         res.json({
