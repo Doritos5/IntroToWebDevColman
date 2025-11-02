@@ -4,6 +4,43 @@ const catalogModel = require('../models/catalogModel');
 const userModel = require('../models/userModel');
 const viewingSessionModel = require('../models/viewingSessionModel');
 
+const INITIAL_PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 5;
+
+function normalizePageSize(value, fallback = DEFAULT_PAGE_SIZE) {
+    const numeric = Number(value);
+
+    if (!Number.isFinite(numeric)) {
+        return fallback;
+    }
+
+    const floored = Math.floor(numeric);
+    if (floored <= 0) {
+        return fallback;
+    }
+
+    return floored;
+}
+
+function normalizeOffset(value) {
+    const numeric = Number(value);
+
+    if (!Number.isFinite(numeric)) {
+        return 0;
+    }
+
+    return Math.max(Math.floor(numeric), 0);
+}
+
+function getConfiguredPageSize() {
+    const envValue =
+        process.env.num_of_items_per_page ??
+        process.env.NUM_OF_ITEMS_PER_PAGE ??
+        process.env.VIDEOS_PER_PAGE;
+
+    return normalizePageSize(envValue, DEFAULT_PAGE_SIZE);
+}
+
 function resolveVideoPath(relativePath) {
     if (path.isAbsolute(relativePath)) {
         return relativePath;
@@ -23,11 +60,14 @@ async function renderCatalogPage(req, res, next) {
                 profileName = profile.displayName;
             }
         }
-        const videosPerPage = Number(process.env.VIDEOS_PER_PAGE || 12);
+
+        const videosPerPage = getConfiguredPageSize();
+
         res.render('catalog', {
             catalogFeed: '',
             profileName,
             videosPerPage,
+            initialPageSize: INITIAL_PAGE_SIZE,
         });
     } catch (error) {
         next(error);
@@ -91,36 +131,49 @@ async function getCatalogByQuery(req, res, next) {
 
 async function getCatalogData(req, res) {
     try {
+        console.log('[getCatalogData] Starting request, session user:', req.session?.user?.email);
         const userEmail = req.session.user.email;
-        const { profileId, page = 1, limit, search = '' } = req.query;
-        const videosPerPage = Number(limit || process.env.VIDEOS_PER_PAGE || 12);
+        const { profileId, page = 1, limit, offset, search = '', sortBy = 'title' } = req.query;
+        console.log('[getCatalogData] Query params:', { profileId, page, limit, offset, search, sortBy });
+        const configuredPageSize = getConfiguredPageSize();
+        const videosPerPage = typeof limit !== 'undefined'
+            ? normalizePageSize(limit, configuredPageSize)
+            : configuredPageSize;
+        const hasOffset = typeof offset !== 'undefined';
+        const normalizedOffset = hasOffset ? normalizeOffset(offset) : undefined;
+        console.log('[getCatalogData] Looking for user:', userEmail);
         const user = await userModel.getUserByEmail(userEmail, { hydrate: true });
+        console.log('[getCatalogData] User found:', !!user, user ? `with ${user.profiles?.length || 0} profiles` : 'null');
         let likedContent = [];
-        if (user && user.profiles && profileId) {
+        if (user && profileId) {
             const profile = user.profiles.find(p => p.id === profileId);
             if (profile) {
                 likedContent = profile.likeContent || [];
             }
         }
+        console.log('[getCatalogData] Calling catalogModel.getCatalog with:', { page, offset: normalizedOffset, limit: videosPerPage, search, sortBy });
         const catalog = await catalogModel.getCatalog({
             page,
+            offset: normalizedOffset,
             limit: videosPerPage,
             search,
+            sortBy,
         });
         res.json({
             catalog: catalog.items,
             likedContent,
             page: catalog.page,
+            offset: catalog.offset,
             total: catalog.total,
             totalPages: Math.ceil(catalog.total / catalog.limit),
             limit: catalog.limit,
         });
     } catch (error) {
-        console.error('Error fetching catalog data:', error);
+        console.error('[getCatalogData] Error fetching catalog data:', error);
+        console.error('[getCatalogData] Error stack:', error.stack);
         res.status(500).json({ message: 'Server error' });
     }
 }
-
 
 async function streamVideo(req, res) {
     const { videoId } = req.params;

@@ -84,7 +84,7 @@ function setupMainDisplayPage() {
     if (!username) { window.location.replace('../profile_page/profilePage.html'); return; }
     const banner = document.createElement('div');
     banner.className = 'greeting-banner';
-    banner.textContent = `Hello "${username}"`;
+    banner.textContent = `Hi "${username}"`;
     const nav = document.querySelector('nav.navbar');
     if (nav) nav.insertAdjacentElement('afterend', banner); else document.body.prepend(banner);
     const avatarImg = document.querySelector('.user-avatar');

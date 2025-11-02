@@ -134,19 +134,28 @@ function toClientSeries(series) {
     return { ...series };
 }
 
-async function getCatalog({ page = 1, limit = 12, search } = {}) {
+async function getCatalog({ page = 1, limit = 10, offset, search, sortBy = 'title' } = {}) {
     const safePage = Math.max(Number(page) || 1, 1);
-    const safeLimit = Math.min(Math.max(Number(limit) || 12, 1), 60);
+    const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 60);
+    const hasOffset = typeof offset !== 'undefined';
+    const safeOffset = hasOffset
+        ? Math.max(Number(offset) || 0, 0)
+        : (safePage - 1) * safeLimit;
 
     const filter = search
         ? { title: { $regex: search.trim(), $options: 'i' } }
         : {};
 
-    const skip = (safePage - 1) * safeLimit;
+
+    // Determine sort order
+    let sortOptions = { title: 1 }; // default sort by title ascending
+    if (sortBy === 'popular' || sortBy === 'likes') {
+        sortOptions = { likes: -1, title: 1 }; // sort by likes descending, then by title
+    }
 
     const items = await Video.find(filter)
-        .sort({ title: 1 })
-        .skip(skip)
+        .skip(safeOffset)
+        .sort(sortOptions)
         .limit(safeLimit)
         .lean({ virtuals: true });
 
@@ -157,7 +166,8 @@ async function getCatalog({ page = 1, limit = 12, search } = {}) {
     return {
         items: normalized,
         total,
-        page: safePage,
+        page: hasOffset ? Math.floor(safeOffset / safeLimit) + 1 : safePage,
+        offset: safeOffset,
         limit: safeLimit,
     };
 }

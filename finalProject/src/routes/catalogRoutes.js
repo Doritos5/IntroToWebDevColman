@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { isAuthenticated } = require('../middleware/authMiddleware');
+const { ensureAuth, ensureAdmin } = require('../middleware/authMiddleware');
 const {
     renderCatalogPage,
     renderVideoDetailPage,
@@ -13,11 +13,11 @@ const {
     updateVideoProgress,
 } = require('../controllers/catalogController');
 
-const { ensureAuth, ensureAdmin } = require('../middleware/authMiddleWare');
-
 router.use(ensureAuth);
+
 router.get('/', renderCatalogPage);
 router.get('/item/:videoId', renderVideoDetailPage);
+
 router.get('/data', getCatalogData);
 router.get("/search/",  getCatalogByQuery);
 router.get("/search/:query",  getCatalogByQuery);
