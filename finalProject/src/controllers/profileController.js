@@ -1,9 +1,10 @@
-const { findUserByEmail, updateProfile, addProfileToUser } = require('../models/userModel');
+const { getUserByEmail, updateProfile, addProfileToUser, deleteProfileById } = require('../models/userModel');
+const { deleteHistoryByProfileId } = require('../models/viewingSessionModel');
 
 async function getUserProfiles(req, res) {
     try {
         const userEmail = req.session.user.email;
-        const user = await findUserByEmail(userEmail);
+        const user = await getUserByEmail(userEmail, { hydrate: true });
         if (user && user.profiles) {
             return res.json(user.profiles);
         }
@@ -22,14 +23,11 @@ async function updateProfileName(req, res) {
     if (!displayName) {
         return res.status(400).json({ message: 'New display name is required.' });
     }
-
     try {
         const updatedProfile = await updateProfile(userEmail, profileId, { displayName });
-
         if (!updatedProfile) {
             return res.status(404).json({ message: 'Profile not found.' });
         }
-
         return res.json({ message: 'Profile updated successfully', profile: updatedProfile });
     } catch (error) {
         console.error('Error updating profile:', error);
@@ -46,7 +44,7 @@ async function createNewProfile(req, res) {
     }
 
     try {
-        const user = await findUserByEmail(userEmail);
+        const user = await getUserByEmail(userEmail, { hydrate: true });
 
         if (!user) {
             return res.status(404).json({ message: 'User not found.' });
@@ -62,8 +60,21 @@ async function createNewProfile(req, res) {
     }
 }
 
+async function deleteProfile(req, res) {
+    try {
+        const { profileId } = req.params;
+        await deleteHistoryByProfileId(profileId);
+        await deleteProfileById(profileId);
+        return res.status(200).json({ message: 'Profile and all associated data deleted.' });
+    } catch (error) {
+        console.error('Error deleting profile:', error);
+        return res.status(500).json({ message: 'Server error.' });
+    }
+}
+
 module.exports = {
     getUserProfiles,
     updateProfileName,
-    createNewProfile
+    createNewProfile,
+    deleteProfile
 };

@@ -51,13 +51,10 @@ function resolveVideoPath(relativePath) {
 async function renderCatalogPage(req, res, next) {
     try {
         const userEmail = req.session.user.email;
-
         const profileId = req.query.profileId;
-
-        const user = await userModel.findUserByEmail(userEmail);
-
+        const user = await userModel.getUserByEmail(userEmail, { hydrate: true });
         let profileName = '';
-        if (user && profileId) {
+        if (user && user.profiles && profileId) {
             const profile = user.profiles.find(p => p.id === profileId);
             if (profile) {
                 profileName = profile.displayName;
@@ -72,7 +69,6 @@ async function renderCatalogPage(req, res, next) {
             videosPerPage,
             initialPageSize: INITIAL_PAGE_SIZE,
         });
-
     } catch (error) {
         next(error);
     }
@@ -83,19 +79,15 @@ async function renderVideoDetailPage(req, res, next) {
         const { videoId } = req.params;
         const { profileId = '' } = req.query;
         const userEmail = req.session.user.email;
-
         const video = await catalogModel.findVideoById(videoId);
         if (!video) {
             return res.status(404).send('Video not found.');
         }
-
-        const user = await userModel.findUserByEmail(userEmail);
-
+        const user = await userModel.getUserByEmail(userEmail, { hydrate: true });
         let profileName = '';
         let likedContent = [];
         let isLiked = false;
-
-        if (user && profileId) {
+        if (user && user.profiles && profileId) {
             const profile = user.profiles.find((p) => p.id === profileId);
             if (profile) {
                 profileName = profile.displayName;
@@ -103,13 +95,11 @@ async function renderVideoDetailPage(req, res, next) {
                 isLiked = likedContent.includes(video.id);
             }
         }
-
         const recommendations = await catalogModel.findRecommendationsByGenres({
             genres: video.genres,
             excludeId: video.id,
             limit: 8,
         });
-
         res.render('item', {
             video,
             profileName,
@@ -141,16 +131,19 @@ async function getCatalogByQuery(req, res, next) {
 
 async function getCatalogData(req, res) {
     try {
+        console.log('[getCatalogData] Starting request, session user:', req.session?.user?.email);
         const userEmail = req.session.user.email;
         const { profileId, page = 1, limit, offset, search = '', sortBy = 'title' } = req.query;
+        console.log('[getCatalogData] Query params:', { profileId, page, limit, offset, search, sortBy });
         const configuredPageSize = getConfiguredPageSize();
         const videosPerPage = typeof limit !== 'undefined'
             ? normalizePageSize(limit, configuredPageSize)
             : configuredPageSize;
         const hasOffset = typeof offset !== 'undefined';
         const normalizedOffset = hasOffset ? normalizeOffset(offset) : undefined;
-        const user = await userModel.findUserByEmail(userEmail);
-
+        console.log('[getCatalogData] Looking for user:', userEmail);
+        const user = await userModel.getUserByEmail(userEmail, { hydrate: true });
+        console.log('[getCatalogData] User found:', !!user, user ? `with ${user.profiles?.length || 0} profiles` : 'null');
         let likedContent = [];
         if (user && profileId) {
             const profile = user.profiles.find(p => p.id === profileId);
@@ -158,7 +151,7 @@ async function getCatalogData(req, res) {
                 likedContent = profile.likeContent || [];
             }
         }
-
+        console.log('[getCatalogData] Calling catalogModel.getCatalog with:', { page, offset: normalizedOffset, limit: videosPerPage, search, sortBy });
         const catalog = await catalogModel.getCatalog({
             page,
             offset: normalizedOffset,
@@ -166,7 +159,6 @@ async function getCatalogData(req, res) {
             search,
             sortBy,
         });
-
         res.json({
             catalog: catalog.items,
             likedContent,
@@ -176,9 +168,9 @@ async function getCatalogData(req, res) {
             totalPages: Math.ceil(catalog.total / catalog.limit),
             limit: catalog.limit,
         });
-
     } catch (error) {
-        console.error('Error fetching catalog data:', error);
+        console.error('[getCatalogData] Error fetching catalog data:', error);
+        console.error('[getCatalogData] Error stack:', error.stack);
         res.status(500).json({ message: 'Server error' });
     }
 }

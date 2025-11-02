@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 dotenv.config();
 
-const { User } = require('./src/models/userModel');
+const { User } = require('../models/userModel');
 
 async function migrateRoles() {
     try {

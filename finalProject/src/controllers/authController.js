@@ -1,7 +1,6 @@
 const crypto = require('crypto')
 const bcrypt = require('bcrypt')
 const{
-    findUserByEmail,
     createUser,
     getUserByEmail,
 } = require('../models/userModel');
@@ -19,33 +18,27 @@ function generateId() {
 async function login (req, res) {
     const { email, password } = req.body || {};
     console.log(`[Auth] Login attempt for ${email || 'unknown email'}`);
-
     if (!email || !password) {
         console.log('[Auth] Login failed - missing credentials');
         return res.status(400).json({ message: 'Email and password are required.' });
     }
-
     try {
-        const user = await getUserByEmail(email);
-        if (!user) {
+        const userRaw = await getUserByEmail(email); // (hydrate: false הוא ברירת מחדל)
+        if (!userRaw) {
             return res.status(401).json({message: 'Invalid email or password.'});
         }
-
-        const ok = await bcrypt.compare(password, user.password);
+        const ok = await bcrypt.compare(password, userRaw.password);
         if (!ok) {
-            return res.status(401).json({message: 'Invalid password'});
+            return res.status(401).json({message: 'Invalid email or password.'});
         }
-
         req.session.user = {
-            id: user.id,
-            email: user.email,
-            username: user.username,
-            role: user.role || 'user',
+            id: userRaw.id,
+            email: userRaw.email,
+            username: userRaw.username,
+            role: userRaw.role || 'user',
         };
-
-        const userForClient = sanitizeUser(await findUserByEmail(email));
+        const userForClient = sanitizeUser(await getUserByEmail(email, { hydrate: true }));
         return res.status(200).json({ message: 'Login successful.', user: userForClient });
-
     } catch (error) {
         console.error('[Auth] Login error:', error);
         return res.status(500).json({ message: 'An unexpected error occurred.' });
@@ -63,7 +56,7 @@ async function register (req, res) {
     const { email, username, password } = req.body || {};
 
     if (!email || !password || !username) {
-        console.log('[Auth] Login failed - missing credentials');
+        console.log('[Auth] Registration failed - missing credentials');
         return res.status(400).json({ message: 'Email, password and username are required.' });
     }
 
@@ -103,14 +96,12 @@ async function register (req, res) {
             ],
         };
         const newUserObj = await createUser(userObj);
-
         req.session.user = {
             id: newUserObj.id,
             email: newUserObj.email,
             username: newUserObj.username,
             role: newUserObj.role || 'user',
         };
-
         return res.status(201).json({ message: 'Registration successful.', user: sanitizeUser(newUserObj) });
     } catch (error) {
         console.error('[Auth] Registration error:', error);
@@ -118,8 +109,22 @@ async function register (req, res) {
     }
 }
 
+async function renderSettingsPage(req, res) {
+    try {
+        const userEmail = req.session.user.email;
+        const user = await getUserByEmail(userEmail, { hydrate: true });
+        res.render('settings', {
+            profiles: user.profiles || []
+        });
+    } catch (error) {
+        console.error('Error rendering settings page:', error);
+        res.status(500).send('Server error');
+    }
+}
+
 module.exports = {
     login,
     register,
-    logout
+    logout,
+    renderSettingsPage,
 }

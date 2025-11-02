@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const profileModel = require('./profileModel');
 const bcrypt = require('bcrypt');
+const { Profile } = require('./profileModel');
 
 const userSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true },
@@ -18,11 +19,23 @@ userSchema.set('toObject', { virtuals: true });
 userSchema.methods.setPassword = async function (plain) {
   this.password = await bcrypt.hash(plain, 12);
 };
-userSchema.methods.validPassword = function (plain) {
+userSchema.methods.validatePassword = function (plain) {
   return bcrypt.compare(plain, this.password);
 };
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
+
+function validateUserFields(userData) {
+    const requiredFields = ['id', 'email', 'username', 'password'];
+    for (const field of requiredFields) {
+        if (!userData[field]) {
+            throw new Error(`Missing required field: ${field}`);
+        }
+    }
+    if (userData.password.length < 6) {
+        throw new Error('Password must be at least 8 characters');
+    }
+}
 
 function toPlain(userDoc) {
     if (!userDoc) {
@@ -65,21 +78,10 @@ async function getUsers() {
     });
 }
 
-async function findUserByEmail(email) {
-    if (!email) {
-        return null;
-    }
-
-    const user = await User.findOne({email: email.toLowerCase()}).lean();
-    return hydrateUser(user);
-}
-
-
-
 
 async function createUser(userData) {
+    validateUserFields(userData);
     const { profiles = [], password, email, username, id, role } = userData;
-
     if (!id) throw new Error('Missing required field: id');
     if (!email) throw new Error('Missing required field: email');
     if (!username) throw new Error('Missing required field: username');
@@ -112,9 +114,6 @@ async function createUser(userData) {
     return { ...plainUser, profiles: [] };
 }
 
-
-
-
 async function updateUser(updatedUser) {
     const { id, profiles, ...userFields } = updatedUser;
     if (!id) {
@@ -125,12 +124,16 @@ async function updateUser(updatedUser) {
     return hydrateUser(user);
 }
 
-async function getUserByEmail(email) {
+async function getUserByEmail(email, options = {}) {
+    const { hydrate = false } = options;
     if (!email) {
         return null;
     }
-
-    return User.findOne({ email: email.toLowerCase() }).lean();
+    const user = await User.findOne({ email: email.toLowerCase() }).lean();
+    if (hydrate) {
+        return hydrateUser(user);
+    }
+    return user;
 }
 
 async function updateUserPassword(id, newPlainPassword) {
@@ -195,10 +198,14 @@ async function addProfileToUser(email, profileName) {
     return profileModel.createProfile(profileData);
 }
 
+async function deleteProfileById(profileId) {
+    const result = await Profile.deleteOne({ id: profileId });
+    return result;
+}
+
 module.exports = {
     User,
     getUsers,
-    findUserByEmail,
     createUser,
     getUserByEmail,
     updateUser,
@@ -207,4 +214,5 @@ module.exports = {
     addLikeToProfile,
     addProfileToUser,
     removeLikeFromProfile,
+    deleteProfileById,
 };

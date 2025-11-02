@@ -59,9 +59,25 @@ async function getAllProgressForProfile({ userEmail, profileId }) {
     }).lean();
 }
 
+async function deleteHistoryByProfileId(profileId) {
+    if (!profileId) {
+        console.warn('[DB] deleteHistoryByProfileId was called without a profileId');
+        return null;
+    }
+    try {
+        const result = await ViewingSession.deleteMany({ profileId: profileId });
+        console.log(`[DB] Deleted ${result.deletedCount} viewing sessions for profile ${profileId}`);
+        return result;
+    } catch (error) {
+        console.error(`[DB] Error deleting viewing history for profile ${profileId}:`, error);
+        throw error;
+    }
+}
+
 module.exports = {
     ViewingSession,
     updateProgress,
     getProgress,
     getAllProgressForProfile,
+    deleteHistoryByProfileId,
 };

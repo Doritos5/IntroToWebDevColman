@@ -1,6 +1,25 @@
-function ensureAuth(req, res, next) {
-    if (req.session?.user) return next();
-    return res.status(401).json({ message: 'login required' });
+const { Profile } = require('../models/profileModel');
+const { User } = require('../models/userModel');
+async function ensureAuth(req, res, next) {
+    console.log('[ensureAuth] Session check:', req.session?.user?.id ? 'User ID found' : 'No user ID');
+    const userId = req.session?.user?.id;
+    if (!userId) {
+        console.log('[ensureAuth] Authentication failed - no user ID in session');
+        return res.status(401).json({ message: 'login required' });
+    }
+    try {
+        const user = await User.findOne({ id: userId }).lean();
+        if (!user) {
+            return req.session.destroy(() => {
+                res.clearCookie('connect.sid');
+                res.status(401).json({ message: 'Session invalid. User not found.' });
+            });
+        }
+        return next();
+    } catch (error) {
+        console.error('Error in ensureAuth middleware:', error);
+        return res.status(500).json({ message: 'Server error during authentication.' });
+    }
 }
 
 function ensureAdmin(req, res, next) {

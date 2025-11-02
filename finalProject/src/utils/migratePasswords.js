@@ -1,7 +1,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
-const { User } = require('./src/models/userModel');
+const { User } = require('../models/userModel');
 
 const SALT_ROUNDS = 12;
 
