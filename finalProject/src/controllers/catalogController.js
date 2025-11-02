@@ -104,7 +104,7 @@ async function getCatalogByQuery(req, res, next) {
 async function getCatalogData(req, res) {
     try {
         const userEmail = req.session.user.email;
-        const { profileId, page = 1, limit, search = '' } = req.query;
+        const { profileId, page = 1, limit, search = '', sortBy = 'title' } = req.query;
         const videosPerPage = Number(limit || process.env.VIDEOS_PER_PAGE || 12);
         const user = await userModel.findUserByEmail(userEmail);
 
@@ -120,6 +120,7 @@ async function getCatalogData(req, res) {
             page,
             limit: videosPerPage,
             search,
+            sortBy,
         });
 
         res.json({
