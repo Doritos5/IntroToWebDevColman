@@ -402,16 +402,24 @@ async function listEpisodesBySeries(seriesId, {page = 1, limit = 100} = {}) {
     }
 
 async function createVideo(data = {}) {
-    const allowed = [
-        'legacyId','title','description','year','genres','poster',
-        'videoPath','type','series','episodeNumber'
-    ];
+    const schemaObj = Video.schema.obj;
+    const allowedKeys = Object.keys(schemaObj);
+
+    if (data.seriesId && !data.series) {
+        data.series = data.seriesId;
+    }
+
     const payload = {};
-    for (const k of allowed) if (k in data) payload[k] = data[k];
+    for (const key of allowedKeys) {
+        if (data[key] !== undefined) {
+            payload[key] = data[key];
+        }
+    }
 
     const doc = await Video.create(payload);
-    return toClientVideo(await Video.findById(doc._id).populate('series').lean({ virtuals: true }));
+    return toClientVideo(doc);
 }
+
 
 async function updateVideoById(id, updates = {}) {
     if (!mongoose.Types.ObjectId.isValid(id)) return null;
