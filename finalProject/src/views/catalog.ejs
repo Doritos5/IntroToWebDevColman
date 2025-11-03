@@ -13,10 +13,6 @@
     <!-- Bootstrap JS (includes Popper) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- defer means - don't run the code until the HTML file is fully loaded. if
-    I remove this line the search buttons won't work as the JS looking for the buttons return null because they are
-    not loaded yet
-    -->
     <script src="/catalog/app.js" defer></script>
 </head>
 <body class="navbar-page">
@@ -51,10 +47,11 @@
                         <img src="/images/netflix_profile.jpg" alt="User" class="rounded user-avatar">
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end text-small shadow">
-                        <li><a class="dropdown-item" href="#">Profile</a></li>
+                        <li><a class="dropdown-item" href="/profile">Profile</a></li>
+                        <li><a class="dropdown-item" href="/profiles">Change profile</a></li>
                         <li><a class="dropdown-item" href="/settings">Settings</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#" id="signOutLink">Sign out</a></li>
+                        <li><a class="dropdown-item" href="/logout">Logout</a></li>
                     </ul>
                 </div>
             </div>
@@ -67,7 +64,6 @@
         Hello, <%= profileName %>
     </div>
 <% } %>
-
 
 <main class="container-xxl">
     <header class="mb-4">
