@@ -416,6 +416,10 @@ async function createVideo(data = {}) {
         }
     }
 
+    const temp = new Video(payload);
+    const err = temp.validateSync();
+    if (err) throw err;
+
     const doc = await Video.create(payload);
     return toClientVideo(doc);
 }
