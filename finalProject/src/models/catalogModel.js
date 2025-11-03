@@ -401,6 +401,43 @@ async function listEpisodesBySeries(seriesId, {page = 1, limit = 100} = {}) {
         };
     }
 
+async function createVideo(data = {}) {
+    const allowed = [
+        'legacyId','title','description','year','genres','poster',
+        'videoPath','type','series','episodeNumber'
+    ];
+    const payload = {};
+    for (const k of allowed) if (k in data) payload[k] = data[k];
+
+    const doc = await Video.create(payload);
+    return toClientVideo(await Video.findById(doc._id).populate('series').lean({ virtuals: true }));
+}
+
+async function updateVideoById(id, updates = {}) {
+    if (!mongoose.Types.ObjectId.isValid(id)) return null;
+
+    const allowed = [
+        'title','description','year','genres','poster',
+        'videoPath','type','series','episodeNumber','likes'
+    ];
+    const payload = {};
+    for (const k of allowed) if (k in updates) payload[k] = updates[k];
+
+    const updated = await Video.findByIdAndUpdate(
+        id,
+        payload,
+        { new: true, runValidators: true }
+    ).populate('series').lean({ virtuals: true });
+
+    return toClientVideo(updated);
+}
+
+async function deleteVideoById(id) {
+    if (!mongoose.Types.ObjectId.isValid(id)) return false;
+    const res = await Video.findByIdAndDelete(id);
+    return !!res;
+}
+
 
 module.exports = {
     Video,
@@ -414,5 +451,8 @@ module.exports = {
     findNextVideo,
     findRecommendationsByGenres,
     listEpisodesBySeries,
+    createVideo,
+    updateVideoById,
+    deleteVideoById,
 };
 

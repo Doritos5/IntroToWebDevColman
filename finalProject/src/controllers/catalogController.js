@@ -323,6 +323,41 @@ async function updateVideoProgress(req, res) {
     }
 }
 
+async function adminCreateVideo(req, res) {
+    try {
+        const created = await catalogModel.createVideo(req.body);
+        return res.status(201).json(created);
+    } catch (error) {
+        console.error('[adminCreateVideo] error:', error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+}
+
+async function adminUpdateVideo(req, res) {
+    try {
+        const { videoId } = req.params;
+        const updated = await catalogModel.updateVideoById(videoId, req.body);
+        if (!updated) return res.status(404).json({ message: 'Video not found' });
+        return res.json(updated);
+    } catch (error) {
+        console.error('[adminUpdateVideo] error:', error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+}
+
+async function adminDeleteVideo(req, res) {
+    try {
+        const { videoId } = req.params;
+        const ok = await catalogModel.deleteVideoById(videoId);
+        if (!ok) return res.status(404).json({ message: 'Video not found' });
+        return res.status(204).end();
+    } catch (error) {
+        console.error('[adminDeleteVideo] error:', error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+}
+
+
 module.exports = {
     renderCatalogPage,
     renderVideoDetailPage,
@@ -333,4 +368,7 @@ module.exports = {
     getNextVideo,
     listEpisodes,
     updateVideoProgress,
+    adminCreateVideo,
+    adminUpdateVideo,
+    adminDeleteVideo,
 };
