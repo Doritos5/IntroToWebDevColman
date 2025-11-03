@@ -402,7 +402,7 @@ async function listEpisodesBySeries(seriesId, {page = 1, limit = 100} = {}) {
     }
 
 async function createVideo(data = {}) {
-    const schemaObj = Video.schema.obj;
+    const schemaObj = videoSchema.obj;
     const allowedKeys = Object.keys(schemaObj);
 
     if (data.seriesId && !data.series) {
