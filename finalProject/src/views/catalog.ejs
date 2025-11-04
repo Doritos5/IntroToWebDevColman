@@ -69,6 +69,10 @@
 </nav>
 
 <main class="container-xxl">
+    <section id="recommended-section" class="container mt-4" style="display:none;">
+  <h2 class="text-white mb-3">Recommended for You</h2>
+  <div id="recommended-grid" class="row"></div>
+</section>
     <header class="mb-4">
         <h2 class="h4 text-white-50 mb-0">Continue Watching</h2>
     </header>
@@ -153,5 +157,87 @@
         <ul class="list-group list-group-flush" id="episodeList"></ul>
     </div>
 </div>
+<script>
+(function () {
+  //Extract profileId from URL
+  const params = new URLSearchParams(window.location.search);
+  const profileId = params.get('profileId');
+
+  //Function to create a video card (same style as the regular feed)
+  function cardHTML(item) {
+    const badges = (item.genres || [])
+      .map(g => `<span class="badge text-bg-secondary me-1 mb-1">${g}</span>`)
+      .join('');
+
+    return `
+      <div class="col-6 col-md-4 col-lg-3 mb-4">
+        <div class="card h-100 bg-dark text-white" data-video-id="${item._id || item.id}">
+          <img src="${item.poster || ''}" class="card-img-top" alt="${item.title || ''}">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title mb-1">${item.title || ''}</h5>
+            <div class="small text-white-50 mb-2">${item.year ?? ''}</div>
+            <div class="mb-3">${badges}</div>
+            <div class="mt-auto d-flex justify-content-between align-items-center">
+              <span class="small">
+                <i class="bi bi-heart-fill text-danger me-1"></i>
+                <span data-likes-id="${item._id || item.id}">${Number(item.likes || 0)}</span>
+              </span>
+              <button class="btn btn-sm btn-outline-light" data-item-id="${item._id || item.id}" data-like-button>Like</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  //Fetch recommendations from API
+  async function loadRecommendations() {
+    if (!profileId) return;
+    try {
+      const res = await fetch(`/api/recommendations?profileId=${encodeURIComponent(profileId)}&limit=12`, {
+        credentials: 'include'
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const items = Array.isArray(data.items) ? data.items : [];
+      if (!items.length) return;
+
+      const grid = document.getElementById('recommended-grid');
+      grid.innerHTML = items.map(cardHTML).join('');
+
+      //Display the section (was hidden by default)
+      document.getElementById('recommended-section').style.display = '';
+    } catch (err) {
+      console.error('[UI] Failed to load recommendations', err);
+    }
+  }
+
+  //Handle Like button clicks inside the recommendations section
+  document.addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('[data-like-button]');
+    if (!btn || !profileId) return;
+    const itemId = btn.getAttribute('data-item-id');
+
+    try {
+      const res = await fetch('/likes/like', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ itemId, profileId })
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const likesSpan = document.querySelector(`[data-likes-id="${itemId}"]`);
+      if (likesSpan && typeof data.newLikesCount !== 'undefined') {
+        likesSpan.textContent = Number(data.newLikesCount);
+      }
+    } catch (e) {
+      console.error('[UI] Like request failed', e);
+    }
+  });
+
+  //Initial load
+  loadRecommendations();
+})();
+</script>
 </body>
 </html>
