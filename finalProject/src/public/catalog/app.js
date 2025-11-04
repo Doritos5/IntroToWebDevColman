@@ -36,8 +36,9 @@ let nextOffset = 0;
 let totalItems = Infinity;
 let isFirstBatch = true;
 let isLoading = false;
+let currentRequestId = 0;
 let activeSearchTerm = '';
-let activeSortBy = 'title';
+let activeSortBy = 'home';
 let likedIds = new Set();
 let observer;
 let modalInstance;
@@ -500,13 +501,23 @@ async function fetchCatalogPage() {
     const profileData = ensureProfileSelected();
     if (!profileData) return;
 
+    // Capture the category, offset, and request ID at the time this request starts
+    const requestCategory = activeSortBy;
+    const expectedOffset = nextOffset;
+    const requestId = currentRequestId;
+    
+    // Additional validation: if offset doesn't make sense, prevent the request
+    if (nextOffset > totalItems && totalItems !== Infinity) {
+        return;
+    }
+    
     isLoading = true;
     sentinel?.classList.remove('hidden');
     setLoadingState(true);
 
     const limit = isFirstBatch ? initialLoadSize : standardLoadSize;
     const safeLimit = limit > 0 ? limit : initialLoadSize;
-
+    
     const params = new URLSearchParams({
         offset: String(nextOffset),
         limit: String(safeLimit),
@@ -517,22 +528,67 @@ async function fetchCatalogPage() {
         params.set('search', activeSearchTerm);
     }
 
-    if (activeSortBy && activeSortBy !== 'title') {
+    if (activeSortBy) {
         params.set('sortBy', activeSortBy);
     }
 
+    // Add category identifier to track request origin
+    params.set('requestCategory', requestCategory);
+
     try {
         const response = await fetch(`/catalog/data?${params.toString()}`);
+        
+        // Check if this request is still valid BEFORE processing response
+        if (requestId !== currentRequestId) {
+            isLoading = false;
+            setLoadingState(false);
+            return;
+        }
+        
+        if (requestCategory !== activeSortBy) {
+            isLoading = false;
+            setLoadingState(false);
+            return;
+        }
+        
         if (!response.ok) {
             throw new Error('Failed to load catalog page');
         }
 
         const data = await response.json();
+        
+        // CRITICAL: Validate BEFORE processing any content to prevent wrong videos from being displayed
+        if (requestId !== currentRequestId) {
+            isLoading = false;
+            setLoadingState(false);
+            return;
+        }
+        
+        if (data.requestCategory && data.requestCategory !== activeSortBy) {
+            isLoading = false;
+            setLoadingState(false);
+            return;
+        }
+        
+        if (requestCategory !== activeSortBy) {
+            isLoading = false;
+            setLoadingState(false);
+            return;
+        }
+        
         updateLikedIds(data.likedContent);
         const waitTime = Math.max(0, MINIMUM_LOADER_DURATION_MS);
         if (!isFirstBatch && waitTime > 0) {
             await loadingTime(waitTime);
         }
+        
+        // CRITICAL: Final validation right before adding content to prevent wrong videos
+        if (requestId !== currentRequestId || requestCategory !== activeSortBy) {
+            isLoading = false;
+            setLoadingState(false);
+            return;
+        }
+        
         const catalogItems = Array.isArray(data.catalog) ? data.catalog : [];
         appendVideos(catalogItems);
 
@@ -540,11 +596,12 @@ async function fetchCatalogPage() {
         const totalFromResponse = Number(data.total);
         totalItems = Number.isFinite(totalFromResponse) ? totalFromResponse : totalItems;
         isFirstBatch = false;
+        isLoading = false;
 
     } catch (error) {
         console.error(error);
-    } finally {
         isLoading = false;
+    } finally {
         setLoadingState(false);
         if (nextOffset >= totalItems) {
             sentinel?.classList.add('hidden');
@@ -555,6 +612,7 @@ async function fetchCatalogPage() {
 }
 
 function initializeObserver() {
+    
     try {
         window.addEventListener('scroll', handleScrollFallback, { passive: true });
     } catch (error) {
@@ -627,9 +685,14 @@ function resetFeedForSort() {
 }
 
 async function setSortBy(sortBy) {
-    console.log(`Setting sort by: ${sortBy}, current: ${activeSortBy}`);
     if (activeSortBy !== sortBy) {
         activeSortBy = sortBy;
+        
+        // Reset pagination state when switching categories
+        nextOffset = 0;
+        totalItems = Infinity;
+        isFirstBatch = true;
+        currentRequestId++; // Invalidate any pending requests
         
         try {
             // Fetch new content while keeping current content visible (no stutter)
@@ -649,14 +712,21 @@ async function setSortBy(sortBy) {
                 params.set('search', activeSearchTerm);
             }
 
-            if (activeSortBy && activeSortBy !== 'title') {
+            if (activeSortBy) {
                 params.set('sortBy', activeSortBy);
             }
 
-            console.log('Fetching catalog with new sort...');
+            // Add category identifier to track request origin
+            params.set('requestCategory', activeSortBy);
+
             const response = await fetch(`/catalog/data?${params.toString()}`);
             if (response.ok) {
                 const data = await response.json();
+                
+                // Check if response matches current category (drop stale responses)
+                if (data.requestCategory && data.requestCategory !== activeSortBy) {
+                    return;
+                }
                 
                 // Atomically replace content to prevent stutter
                 feed.innerHTML = '';
@@ -664,13 +734,18 @@ async function setSortBy(sortBy) {
                 appendVideos(data.catalog || []);
 
                 // Reset pagination state for new sort
-                nextOffset = (data.catalog || []).length;
+                const itemsLoaded = (data.catalog || []).length;
+                nextOffset = itemsLoaded;
                 const totalFromResponse = Number(data.total);
                 totalItems = Number.isFinite(totalFromResponse) ? totalFromResponse : Infinity;
                 isFirstBatch = false;
-
+                
+                // Disable infinite scroll if we've loaded all available items
                 if (nextOffset >= totalItems) {
                     sentinel?.classList.add('hidden');
+                    if (observer && sentinel) {
+                        observer.unobserve(sentinel);
+                    }
                 } else {
                     sentinel?.classList.remove('hidden');
                 }
@@ -684,8 +759,6 @@ async function setSortBy(sortBy) {
             isLoading = false;
             setLoadingState(false);
         }
-    } else {
-        console.log('Sort already active, skipping...');
     }
 }
 
@@ -706,8 +779,8 @@ function handleSearchInput(event) {
     activeSearchTerm = newTerm;
     
     // Reset sort to title when searching
-    if (activeSortBy !== 'title') {
-        activeSortBy = 'title';
+    if (activeSortBy !== 'home') {
+        activeSortBy = 'home';
         // Update navigation styling
         const homeLink = document.getElementById('homeLink');
         const mostPopularLink = document.getElementById('mostPopularLink');
@@ -1034,7 +1107,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         // Only process if not already active
         if (!homeLink.classList.contains('active')) {
-            setSortBy('title');
+            setSortBy('home');
             homeLink.classList.add('active');
             mostPopularLink?.classList.remove('active');
         }

@@ -68,6 +68,7 @@ async function renderCatalogPage(req, res, next) {
             profileName,
             videosPerPage,
             initialPageSize: INITIAL_PAGE_SIZE,
+            cacheBuster: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         });
     } catch (error) {
         next(error);
@@ -131,19 +132,15 @@ async function getCatalogByQuery(req, res, next) {
 
 async function getCatalogData(req, res) {
     try {
-        console.log('[getCatalogData] Starting request, session user:', req.session?.user?.email);
         const userEmail = req.session.user.email;
-        const { profileId, page = 1, limit, offset, search = '', sortBy = 'title' } = req.query;
-        console.log('[getCatalogData] Query params:', { profileId, page, limit, offset, search, sortBy });
+        const { profileId, page = 1, limit, offset, search = '', sortBy = 'title', requestCategory } = req.query;
         const configuredPageSize = getConfiguredPageSize();
         const videosPerPage = typeof limit !== 'undefined'
             ? normalizePageSize(limit, configuredPageSize)
             : configuredPageSize;
         const hasOffset = typeof offset !== 'undefined';
         const normalizedOffset = hasOffset ? normalizeOffset(offset) : undefined;
-        console.log('[getCatalogData] Looking for user:', userEmail);
         const user = await userModel.getUserByEmail(userEmail, { hydrate: true });
-        console.log('[getCatalogData] User found:', !!user, user ? `with ${user.profiles?.length || 0} profiles` : 'null');
         let likedContent = [];
         if (user && profileId) {
             const profile = user.profiles.find(p => p.id === profileId);
@@ -151,14 +148,25 @@ async function getCatalogData(req, res) {
                 likedContent = profile.likeContent || [];
             }
         }
-        console.log('[getCatalogData] Calling catalogModel.getCatalog with:', { page, offset: normalizedOffset, limit: videosPerPage, search, sortBy });
-        const catalog = await catalogModel.getCatalog({
-            page,
-            offset: normalizedOffset,
-            limit: videosPerPage,
-            search,
-            sortBy,
-        });
+        let catalog;
+        if (sortBy === 'home' && profileId) {
+            // Continue Watching: Get videos with viewing progress for this profile
+            catalog = await catalogModel.getContinueWatching({
+                profileId,
+                offset: normalizedOffset,
+                limit: videosPerPage,
+                search,
+            });
+        } else {
+            // Regular catalog (including Most Popular)
+            catalog = await catalogModel.getCatalog({
+                page,
+                offset: normalizedOffset,
+                limit: videosPerPage,
+                search,
+                sortBy,
+            });
+        }
         res.json({
             catalog: catalog.items,
             likedContent,
@@ -167,10 +175,10 @@ async function getCatalogData(req, res) {
             total: catalog.total,
             totalPages: Math.ceil(catalog.total / catalog.limit),
             limit: catalog.limit,
+            requestCategory,
         });
     } catch (error) {
-        console.error('[getCatalogData] Error fetching catalog data:', error);
-        console.error('[getCatalogData] Error stack:', error.stack);
+        console.error('Error fetching catalog data:', error);
         res.status(500).json({ message: 'Server error' });
     }
 }

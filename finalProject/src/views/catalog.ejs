@@ -17,7 +17,7 @@
     I remove this line the search buttons won't work as the JS looking for the buttons return null because they are
     not loaded yet
     -->
-    <script src="/catalog/app.js" defer></script>
+    <script src="/catalog/app.js?v=<%= cacheBuster %>" defer></script>
 </head>
 <body class="navbar-page">
 
@@ -70,8 +70,19 @@
 
 <main class="container-xxl">
     <header class="mb-4">
-        <h2 class="h4 text-white-50 mb-0">Continue Watching</h2>
+        <h2 class="h4 text-white-50 mb-0" id="pageHeader">Continue Watching</h2>
     </header>
+    
+    <script>
+        // Header hiding
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.id === 'mostPopularLink') {
+                document.body.classList.add('most-popular');
+            } else if (e.target && e.target.id === 'homeLink') {
+                document.body.classList.remove('most-popular');
+            }
+        });
+    </script>
 
     <div
             class="row row-cols-1 row-cols-md-3 mx-4 my-6 text-center"

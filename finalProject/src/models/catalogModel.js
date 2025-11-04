@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { ViewingSession } = require('./viewingSessionModel');
 
 const seriesSchema = new mongoose.Schema({
     title: { type: String, required: true, trim: true },
@@ -401,11 +402,75 @@ async function listEpisodesBySeries(seriesId, {page = 1, limit = 100} = {}) {
         };
     }
 
+async function getContinueWatching({ profileId, offset = 0, limit = 10, search = '' } = {}) {
+    try {
+        // Find viewing sessions for this specific profile with actual progress
+        const viewingSessions = await ViewingSession.find({
+            profileId: profileId,
+            positionSeconds: { $gt: 0, $exists: true }, // Has started watching
+            durationSeconds: { $gt: 0, $exists: true }, // Has valid duration
+            $expr: { 
+                $and: [
+                    { $gt: ['$positionSeconds', 0] },
+                    { $lt: ['$positionSeconds', { $multiply: ['$durationSeconds', 0.99] }] }
+                ]
+            } // Not completed (less than 99%)
+        })
+        .sort({ updatedAt: -1 }) // Most recently watched first
+        .populate('videoId')
+        .exec();
+
+        if (!viewingSessions || viewingSessions.length === 0) {
+            return {
+                items: [],
+                total: 0,
+                page: 1,
+                offset,
+                limit,
+            };
+        }
+
+        // Extract valid video objects and apply pagination
+        let videoItems = viewingSessions
+            .map(session => session.videoId)
+            .filter(video => video && video._id);
+
+        // Apply search filter if provided
+        if (search && search.trim()) {
+            const searchLower = search.toLowerCase().trim();
+            videoItems = videoItems.filter(video => 
+                video.title && video.title.toLowerCase().includes(searchLower)
+            );
+        }
+
+        // Apply pagination manually since we need to filter first
+        const totalFilteredItems = videoItems.length;
+        const paginatedItems = videoItems.slice(offset, offset + limit);
+
+        return {
+            items: paginatedItems,
+            total: totalFilteredItems,
+            page: Math.floor(offset / limit) + 1,
+            offset,
+            limit,
+        };
+    } catch (error) {
+        console.error('Error in getContinueWatching:', error);
+        return {
+            items: [],
+            total: 0,
+            page: 1,
+            offset: 0,
+            limit,
+        };
+    }
+}
 
 module.exports = {
     Video,
     Series,
     getCatalog,
+    getContinueWatching,
     generateCatalogFeed,
     findVideoById,
     incrementLikes,
