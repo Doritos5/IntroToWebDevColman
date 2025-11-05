@@ -451,7 +451,41 @@ main {
 }
 
 .offcanvas {
-    z-index: 2000 !important; /* higher than Bootstrap’s default 1055 */
+    z-index: 2000 !important; /* higher than Bootstrap's default 1055 */
+}
+
+/* ------------------------- Clickable Genre Titles ------------------------- */
+
+.clickable-genre-title {
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    position: relative;
+    display: inline-block;
+}
+
+.clickable-genre-title:hover {
+    color: #ffffff !important;
+    transform: translateY(-1px);
+}
+
+.clickable-genre-title:active {
+    transform: translateY(0px);
+}
+
+/* Optional: Add a subtle underline effect on hover */
+.clickable-genre-title::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: -4px;
+    left: 0;
+    background-color: #ffffff;
+    transition: width 0.3s ease;
+}
+
+.clickable-genre-title:hover::after {
+    width: 100%;
 }
 
 

@@ -123,7 +123,38 @@
                                 
                                 const header = document.createElement('header');
                                 header.className = 'mb-4';
-                                header.innerHTML = `<h2 class="h4 text-white-50 mb-0">${section.genre}</h2>`;
+                                header.innerHTML = `<h2 class="h4 text-white-50 mb-0 clickable-genre-title" data-genre="${section.genre}" style="cursor: pointer; transition: color 0.2s ease;">${section.genre}</h2>`;
+                                
+                                // Add click handler to navigate to genre category
+                                const titleElement = header.querySelector('.clickable-genre-title');
+                                titleElement.addEventListener('click', () => {
+                                    const genre = section.genre;
+                                    
+                                    // Update navigation active states
+                                    document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+                                    const genreLink = document.querySelector(`[data-genre="${genre}"]`);
+                                    if (genreLink) {
+                                        genreLink.classList.add('active');
+                                    }
+                                    
+                                    // Trigger genre navigation using existing setSortBy function
+                                    if (typeof window.setSortBy === 'function') {
+                                        window.setSortBy(`genre:${genre}`);
+                                    } else {
+                                        // Fallback: trigger genre link click if setSortBy not available
+                                        if (genreLink) {
+                                            genreLink.click();
+                                        }
+                                    }
+                                });
+                                
+                                // Add hover effects
+                                titleElement.addEventListener('mouseenter', () => {
+                                    titleElement.style.color = '#ffffff';
+                                });
+                                titleElement.addEventListener('mouseleave', () => {
+                                    titleElement.style.color = '';
+                                });
                                 
                                 const videosGrid = document.createElement('div');
                                 videosGrid.className = 'row row-cols-1 row-cols-md-3 mx-4 my-6 text-center';

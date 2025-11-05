@@ -775,6 +775,9 @@ async function setSortBy(sortBy) {
     }
 }
 
+// Make setSortBy available globally for genre title clicks
+window.setSortBy = setSortBy;
+
 function toggleSearchInput() {
     if (!searchInput) return;
     searchInput.classList.toggle('active');
