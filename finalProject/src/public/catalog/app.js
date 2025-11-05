@@ -48,6 +48,7 @@ let episodesMap = new Map();
 let progressInterval = null;
 let resumePosition = 0;
 let isSeeking = false;
+let searchDebounceTimer = null;
 let episodesLoaded = false;
 let episodeDrawerInstance = null;
 let episodeOrder = [];
@@ -121,6 +122,11 @@ function appendVideos(videos) {
 function setLoadingState(active) {
     if (!sentinel) return;
 
+    // Don't show loading indicator during search
+    if (activeSearchTerm && activeSearchTerm.trim()) {
+        active = false;
+    }
+
     sentinel.classList.toggle('active', active);
 
     if (feedLoader) {
@@ -144,13 +150,16 @@ function resetFeed() {
     videoCache = new Map();
     setLoadingState(false);
     if (sentinel) {
-        sentinel.classList.remove('hidden');
+        // Hide sentinel during search, show for normal pagination
+        if (activeSearchTerm && activeSearchTerm.trim()) {
+            sentinel.classList.add('hidden');
+        } else {
+            sentinel.classList.remove('hidden');
+        }
     }
-    if (observer && sentinel) {
+    if (observer && sentinel && (!activeSearchTerm || !activeSearchTerm.trim())) {
         observer.observe(sentinel);
     }
-    feed.innerHTML = '';
-    videoCache = new Map();
 }
 
 function updateLikedIds(likedContent) {
@@ -512,8 +521,12 @@ async function fetchCatalogPage() {
     }
     
     isLoading = true;
-    sentinel?.classList.remove('hidden');
-    setLoadingState(true);
+    
+    // Don't show loading elements during search
+    if (!activeSearchTerm || !activeSearchTerm.trim()) {
+        sentinel?.classList.remove('hidden');
+        setLoadingState(true);
+    }
 
     const limit = isFirstBatch ? initialLoadSize : standardLoadSize;
     const safeLimit = limit > 0 ? limit : initialLoadSize;
@@ -592,6 +605,39 @@ async function fetchCatalogPage() {
         const catalogItems = Array.isArray(data.catalog) ? data.catalog : [];
         appendVideos(catalogItems);
 
+        // Handle search results and no-results message for all categories
+        if (activeSearchTerm && isFirstBatch) {
+            if (activeSortBy === 'home') {
+                // Home category: Handle Continue Watching section
+                const pageHeader = document.getElementById('pageHeader');
+                if (pageHeader) {
+                    // Hide pageHeader if there are no Continue Watching results
+                    pageHeader.style.display = catalogItems.length > 0 ? 'block' : 'none';
+                }
+                
+                // Store Continue Watching results count for no-results check
+                window.continueWatchingResultsCount = catalogItems.length;
+                
+                // Check for no results after a delay to let genre sections load
+                setTimeout(() => {
+                    checkAndShowNoResults(activeSearchTerm);
+                }, 200);
+            } else {
+                // Other categories: Track main results and check immediately
+                window.mainResultsCount = catalogItems.length;
+                checkAndShowNoResults(activeSearchTerm);
+            }
+        } else if (!activeSearchTerm) {
+            // Reset counters and hide message when not searching
+            if (activeSortBy === 'home') {
+                window.continueWatchingResultsCount = catalogItems.length;
+                window.genreSectionsResultsCount = 0; // Will be set by genre sections
+            } else {
+                window.mainResultsCount = catalogItems.length;
+            }
+            hideNoResultsMessage();
+        }
+
         nextOffset += catalogItems.length;
         const totalFromResponse = Number(data.total);
         totalItems = Number.isFinite(totalFromResponse) ? totalFromResponse : totalItems;
@@ -603,7 +649,7 @@ async function fetchCatalogPage() {
         isLoading = false;
     } finally {
         setLoadingState(false);
-        if (nextOffset >= totalItems) {
+        if (nextOffset >= totalItems || (activeSearchTerm && activeSearchTerm.trim())) {
             sentinel?.classList.add('hidden');
         } else {
             ensureContentFill();
@@ -677,9 +723,14 @@ function resetFeedForSort() {
     videoCache = new Map();
     setLoadingState(false);
     if (sentinel) {
-        sentinel.classList.remove('hidden');
+        // Hide sentinel during search, show for normal pagination
+        if (activeSearchTerm && activeSearchTerm.trim()) {
+            sentinel.classList.add('hidden');
+        } else {
+            sentinel.classList.remove('hidden');
+        }
     }
-    if (observer && sentinel) {
+    if (observer && sentinel && (!activeSearchTerm || !activeSearchTerm.trim())) {
         observer.observe(sentinel);
     }
 }
@@ -691,6 +742,8 @@ async function setSortBy(sortBy) {
         // Update page header based on category
         const pageHeader = document.getElementById('pageHeader');
         if (pageHeader) {
+            // Always show the header when switching categories (not during search)
+            pageHeader.style.display = 'block';
             if (sortBy === 'home') {
                 pageHeader.textContent = 'Continue Watching';
             } else if (sortBy === 'popular') {
@@ -700,6 +753,15 @@ async function setSortBy(sortBy) {
                 pageHeader.textContent = genre;
             }
         }
+        
+        // Close search when switching categories
+        if (activeSearchTerm || (searchInput && searchInput.classList.contains('active'))) {
+            closeSearch();
+            return; // closeSearch already handles the rest
+        }
+        
+        // Hide no-results message when switching categories
+        hideNoResultsMessage();
         
         // Reset pagination state when switching categories
         nextOffset = 0;
@@ -713,7 +775,11 @@ async function setSortBy(sortBy) {
             if (!profileData) return;
 
             isLoading = true;
-            setLoadingState(true);
+            
+            // Don't show loading elements during search
+            if (!activeSearchTerm || !activeSearchTerm.trim()) {
+                setLoadingState(true);
+            }
             
             const params = new URLSearchParams({
                 offset: '0',
@@ -778,34 +844,207 @@ async function setSortBy(sortBy) {
 // Make setSortBy available globally for genre title clicks
 window.setSortBy = setSortBy;
 
+function openSearch() {
+    if (!searchInput) return;
+    searchInput.classList.add('active');
+    searchInput.disabled = false;
+    
+    // Add class to disable magnifying glass
+    document.body.classList.add('search-active');
+    
+    searchInput.focus();
+}
+
+function closeSearch() {
+    if (!searchInput) return;
+    
+    // Clear debounce timer
+    if (searchDebounceTimer) {
+        clearTimeout(searchDebounceTimer);
+    }
+    
+    // Clear search
+    searchInput.value = '';
+    activeSearchTerm = '';
+    
+    // Close and disable input
+    searchInput.classList.remove('active');
+    searchInput.disabled = true;
+    
+    // Remove class to re-enable magnifying glass
+    document.body.classList.remove('search-active');
+    
+    // Show pageHeader and hide no-results message when search is cleared
+    if (activeSortBy === 'home') {
+        const pageHeader = document.getElementById('pageHeader');
+        if (pageHeader) {
+            pageHeader.style.display = 'block';
+        }
+    }
+    hideNoResultsMessage();
+    
+    resetFeed();
+    fetchCatalogPage();
+}
+
 function toggleSearchInput() {
     if (!searchInput) return;
-    searchInput.classList.toggle('active');
     if (searchInput.classList.contains('active')) {
-        searchInput.focus();
+        closeSearch();
+    } else {
+        openSearch();
+    }
+}
+
+function showNoResultsMessage(searchTerm, category) {
+    // Remove existing no-results message
+    const existingMessage = document.getElementById('no-results-message');
+    if (existingMessage) {
+        existingMessage.remove();
+    }
+    
+    // Generate category-specific message
+    let categoryText = '';
+    if (category === 'home') {
+        categoryText = '';
+    } else if (category === 'popular') {
+        categoryText = ' in Most Popular';
+    } else if (category && category.startsWith('genre:')) {
+        const genre = category.replace('genre:', '');
+        categoryText = ` in ${genre}`;
+    } else {
+        categoryText = ` in this category`;
+    }
+    
+    // Create new no-results message
+    const messageDiv = document.createElement('div');
+    messageDiv.id = 'no-results-message';
+    messageDiv.className = 'text-center mt-5 mb-5';
+    messageDiv.innerHTML = `
+        <div class="text-white-50">
+            <i class="bi bi-search mb-3" style="font-size: 3rem;"></i>
+            <h3 class="h4 mb-2">No matching titles found</h3>
+            <p class="mb-0">We couldn't find any content matching "${searchTerm}"${categoryText}</p>
+            <p class="small">Try adjusting your search or browse our categories</p>
+        </div>
+    `;
+    
+    // Insert after the main header
+    const mainElement = document.querySelector('main.container-xxl');
+    const headerElement = mainElement ? mainElement.querySelector('header') : null;
+    if (headerElement) {
+        headerElement.insertAdjacentElement('afterend', messageDiv);
+    }
+}
+
+function hideNoResultsMessage() {
+    try {
+        const existingMessage = document.getElementById('no-results-message');
+        if (existingMessage && existingMessage.parentNode) {
+            existingMessage.remove();
+        }
+    } catch (error) {
+        console.error('Error hiding no-results message:', error);
+    }
+}
+
+function checkAndShowNoResults(searchTerm, category = null) {
+    // Only check during active search
+    if (!searchTerm || !searchTerm.trim()) {
+        hideNoResultsMessage();
+        return;
+    }
+    
+    const currentCategory = category || activeSortBy;
+    
+    if (currentCategory === 'home') {
+        // For Home category, check if both Continue Watching and genre sections are empty
+        const continueWatchingCount = window.continueWatchingResultsCount || 0;
+        const genreSectionsCount = window.genreSectionsResultsCount || 0;
+        
+        if (continueWatchingCount === 0 && genreSectionsCount === 0) {
+            showNoResultsMessage(searchTerm, currentCategory);
+        } else {
+            hideNoResultsMessage();
+        }
+    } else {
+        // For other categories, check if main results are empty
+        const mainResultsCount = window.mainResultsCount || 0;
+        
+        if (mainResultsCount === 0) {
+            showNoResultsMessage(searchTerm, currentCategory);
+        } else {
+            hideNoResultsMessage();
+        }
+    }
+}
+
+// Make functions globally accessible for EJS template
+window.checkAndShowNoResults = checkAndShowNoResults;
+
+function debouncedSearch(searchTerm) {
+    try {
+        // Clear existing timer
+        if (searchDebounceTimer) {
+            clearTimeout(searchDebounceTimer);
+        }
+        
+        // Set new timer
+        searchDebounceTimer = setTimeout(() => {
+            try {
+                activeSearchTerm = searchTerm;
+                
+                // Show pageHeader and hide no-results message when search is cleared
+                if (!activeSearchTerm) {
+                    if (activeSortBy === 'home') {
+                        const pageHeader = document.getElementById('pageHeader');
+                        if (pageHeader) {
+                            pageHeader.style.display = 'block';
+                        }
+                    }
+                    hideNoResultsMessage();
+                }
+                
+                // Don't change category when searching - search within current category
+                resetFeed();
+                fetchCatalogPage();
+            } catch (error) {
+                console.error('Error in debounced search:', error);
+            }
+        }, 300); // 300ms delay
+    } catch (error) {
+        console.error('Error setting up debounced search:', error);
     }
 }
 
 function handleSearchInput(event) {
     const newTerm = event.target.value.trim();
-    if (newTerm === activeSearchTerm) {
+    
+    // If search is cleared immediately, handle it without delay
+    if (newTerm === '' && activeSearchTerm !== '') {
+        if (searchDebounceTimer) {
+            clearTimeout(searchDebounceTimer);
+        }
+        
+        activeSearchTerm = '';
+        
+        if (activeSortBy === 'home') {
+            const pageHeader = document.getElementById('pageHeader');
+            if (pageHeader) {
+                pageHeader.style.display = 'block';
+            }
+        }
+        hideNoResultsMessage();
+        
+        resetFeed();
+        fetchCatalogPage();
         return;
     }
-
-    activeSearchTerm = newTerm;
     
-    // Reset sort to title when searching
-    if (activeSortBy !== 'home') {
-        activeSortBy = 'home';
-        // Update navigation styling
-        const homeLink = document.getElementById('homeLink');
-        const mostPopularLink = document.getElementById('mostPopularLink');
-        homeLink?.classList.add('active');
-        mostPopularLink?.classList.remove('active');
+    // For other changes, use debounced search
+    if (newTerm !== activeSearchTerm) {
+        debouncedSearch(newTerm);
     }
-    
-    resetFeed();
-    fetchCatalogPage();
 }
 
 function getProfileId() {
@@ -1170,6 +1409,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     searchIcon?.addEventListener('click', toggleSearchInput);
     searchInput?.addEventListener('input', handleSearchInput);
+    
+    // Close button event listener
+    const searchCloseBtn = document.getElementById('searchCloseBtn');
+    searchCloseBtn?.addEventListener('click', closeSearch);
+    
+    // Add keyboard support for search
+    searchInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeSearch();
+        }
+    });
 
     overlayPlayButton?.addEventListener('click', togglePlay);
     playPauseButton?.addEventListener('click', togglePlay);

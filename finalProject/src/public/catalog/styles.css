@@ -135,17 +135,67 @@ main {
     padding-top: 84px;
 }
 
+/* Search container */
+.search-container {
+    position: relative;
+    margin-left: 12px; /* Increased margin from magnifying glass */
+    display: flex;
+    align-items: center;
+}
+
 .search-box {
     width: 0;
     opacity: 0;
+    visibility: hidden; /* Make completely invisible */
     transition: all 0.4s ease; /* smooth animation */
     overflow: hidden;
+    pointer-events: none; /* Disable clicking when hidden */
 }
 
 /* when active */
 .search-box.active {
     width: 200px;   /* expand to desired width */
     opacity: 1;
+    visibility: visible; /* Make visible when active */
+    pointer-events: auto; /* Enable clicking when visible */
+}
+
+/* Close button */
+.search-close-btn {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #6c757d;
+    font-size: 1.4rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s ease;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.search-close-btn:hover {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Show close button when search is active and has content */
+.search-box.active + .search-close-btn {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Disable magnifying glass when search is active */
+.search-active .bi-search {
+    pointer-events: none;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* ----- Animations ----- */

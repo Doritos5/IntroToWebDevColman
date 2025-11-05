@@ -448,7 +448,7 @@ async function getContinueWatching({ profileId, offset = 0, limit = 10, search =
         const paginatedItems = videoItems.slice(offset, offset + limit);
 
         return {
-            items: paginatedItems,
+            items: paginatedItems.map(video => toClientVideo(video)),
             total: totalFilteredItems,
             page: Math.floor(offset / limit) + 1,
             offset,

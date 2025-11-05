@@ -42,12 +42,16 @@
 
             <div class="d-flex align-items-center">
                 <span class="icon-btn bi bi-search"></span>
-                <label for="searchInput" class="visually-hidden">Search</label>
-                <input id="searchInput"
-                       type="text"
-                       class="form-control bg-dark text-white border-0 ms-2 search-box"
-                       placeholder="Search..."
-                />
+                <div class="search-container">
+                    <label for="searchInput" class="visually-hidden">Search</label>
+                    <input id="searchInput"
+                           type="text"
+                           class="form-control bg-dark text-white border-0 search-box"
+                           placeholder="Search..."
+                           disabled
+                    />
+                    <span class="search-close-btn bi bi-x" id="searchCloseBtn"></span>
+                </div>
 
                 <% if (locals.profileName) { %>
                     <div class="greeting-banner nav-greeting ms-3">
@@ -191,7 +195,34 @@
                                 const clonedResponse = response.clone();
                                 clonedResponse.json().then(data => {
                                     if (data.genreSections && Array.isArray(data.genreSections)) {
-                                        setTimeout(() => window.appendGenreSections(data.genreSections), 100);
+                                        // Check if we're searching
+                                        const urlParams = new URLSearchParams(response.url.split('?')[1]);
+                                        const searchTerm = urlParams.get('search');
+                                        
+                                        let sectionsToShow = data.genreSections;
+                                        
+                                        if (searchTerm && searchTerm.trim()) {
+                                            // Filter genre sections to only show videos matching search
+                                            const searchLower = searchTerm.toLowerCase().trim();
+                                            sectionsToShow = data.genreSections.map(section => ({
+                                                ...section,
+                                                videos: section.videos.filter(video => 
+                                                    video.title && video.title.toLowerCase().includes(searchLower)
+                                                )
+                                            })).filter(section => section.videos.length > 0); // Only keep sections with matching videos
+                                        }
+                                        
+                                        // Store genre sections results count for no-results check
+                                        const totalGenreVideos = sectionsToShow.reduce((total, section) => total + section.videos.length, 0);
+                                        window.genreSectionsResultsCount = totalGenreVideos;
+                                        
+                                        setTimeout(() => {
+                                            window.appendGenreSections(sectionsToShow);
+                                            // Check for no results after genre sections are loaded
+                                            if (searchTerm && searchTerm.trim() && window.checkAndShowNoResults) {
+                                                window.checkAndShowNoResults(searchTerm);
+                                            }
+                                        }, 100);
                                     }
                                 }).catch(error => console.error('Genre sections fetch failed:', error));
                             }
