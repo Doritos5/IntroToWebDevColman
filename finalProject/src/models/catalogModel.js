@@ -466,6 +466,60 @@ async function getContinueWatching({ profileId, offset = 0, limit = 10, search =
     }
 }
 
+async function getVideosByGenre(limit = 10) {
+    try {
+        // Get all unique genres from the videos collection
+        const genres = await Video.distinct('genres', { genres: { $exists: true, $ne: [] } });
+        
+        const genreSections = [];
+        
+        for (const genre of genres) {
+            // For each genre, get the newest videos (by year)
+            // For series, get only the first episode and max 1 per series
+            const videos = await Video.aggregate([
+                // Match videos that have this genre
+                { $match: { genres: genre } },
+                
+                // Sort by year (newest first), then by episodeNumber for series
+                { $sort: { year: -1, episodeNumber: 1 } },
+                
+                // Group series together to get only first episode per series
+                {
+                    $group: {
+                        _id: {
+                            // Group by series ID for series, by video ID for movies
+                            seriesId: { $cond: [{ $eq: ['$type', 'series'] }, '$series', '$_id'] },
+                            type: '$type'
+                        },
+                        firstEpisode: { $first: '$$ROOT' }
+                    }
+                },
+                
+                // Replace root with the first episode document
+                { $replaceRoot: { newRoot: '$firstEpisode' } },
+                
+                // Sort again by year (newest first)
+                { $sort: { year: -1 } },
+                
+                // Limit to specified number of items per genre
+                { $limit: limit }
+            ]);
+            
+            if (videos.length > 0) {
+                genreSections.push({
+                    genre,
+                    videos: videos.map(toClientVideo)
+                });
+            }
+        }
+        
+        return genreSections;
+    } catch (error) {
+        console.error('Error getting videos by genre:', error);
+        return [];
+    }
+}
+
 module.exports = {
     Video,
     Series,
@@ -479,8 +533,6 @@ module.exports = {
     findNextVideo,
     findRecommendationsByGenres,
     listEpisodesBySeries,
-    createVideo,
-    updateVideoById,
-    deleteVideoById,
+    getVideosByGenre,
 };
 
