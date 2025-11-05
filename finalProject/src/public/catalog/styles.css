@@ -65,7 +65,7 @@ body.navbar-page::after{
 }
 
 .navbar-nav {
-    margin-left: 3rem !important;
+    margin-left: 2rem !important;
 }
 
 .nav-item {
@@ -75,14 +75,15 @@ body.navbar-page::after{
 
 .nav-link {
     color: #fff !important;
-    margin-right: 1rem;
+    margin-right: 0.5rem;
     transition: all 0.2s ease;
     font-size: 1rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 0.6rem;
+    white-space: nowrap;
 }
 .nav-link:hover:not(.active) {
     text-decoration: none;
@@ -99,7 +100,7 @@ body.navbar-page::after{
         0 0 24px rgba(229, 9, 20, 0.4);
 }
 .icon-btn {
-    margin-left: 1rem;
+    margin-left: 0.25rem;
     cursor: pointer;
 }
 .navbar .dropdown-toggle {
@@ -432,6 +433,18 @@ main {
 .episode-play:hover,
 .episode-play:focus-visible {
     background: rgba(229, 9, 20, 1);
+}
+
+@media (max-width: 1200px) {
+    /* Reduce spacing further on medium screens to prevent genre name wrapping */
+    .navbar-nav {
+        margin-left: 1rem !important;
+    }
+    .nav-link {
+        margin-right: 0.3rem;
+        padding: 0.5rem 0.4rem;
+        font-size: 0.9rem;
+    }
 }
 
 @media (max-width: 420px) {
