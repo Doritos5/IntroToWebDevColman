@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { ViewingSession } = require('./viewingSessionModel');
 
 const seriesSchema = new mongoose.Schema({
     title: { type: String, required: true, trim: true },
@@ -401,60 +402,75 @@ async function listEpisodesBySeries(seriesId, {page = 1, limit = 100} = {}) {
         };
     }
 
-async function createVideo(data = {}) {
-    const schemaObj = videoSchema.obj;
-    const allowedKeys = Object.keys(schemaObj);
+async function getContinueWatching({ profileId, offset = 0, limit = 10, search = '' } = {}) {
+    try {
+        // Find viewing sessions for this specific profile with actual progress
+        const viewingSessions = await ViewingSession.find({
+            profileId: profileId,
+            positionSeconds: { $gt: 0, $exists: true }, // Has started watching
+            durationSeconds: { $gt: 0, $exists: true }, // Has valid duration
+            $expr: { 
+                $and: [
+                    { $gt: ['$positionSeconds', 0] },
+                    { $lt: ['$positionSeconds', { $multiply: ['$durationSeconds', 0.99] }] }
+                ]
+            } // Not completed (less than 99%)
+        })
+        .sort({ updatedAt: -1 }) // Most recently watched first
+        .populate('videoId')
+        .exec();
 
-    if (data.seriesId && !data.series) {
-        data.series = data.seriesId;
-    }
-
-    const payload = {};
-    for (const key of allowedKeys) {
-        if (data[key] !== undefined) {
-            payload[key] = data[key];
+        if (!viewingSessions || viewingSessions.length === 0) {
+            return {
+                items: [],
+                total: 0,
+                page: 1,
+                offset,
+                limit,
+            };
         }
+
+        // Extract valid video objects and apply pagination
+        let videoItems = viewingSessions
+            .map(session => session.videoId)
+            .filter(video => video && video._id);
+
+        // Apply search filter if provided
+        if (search && search.trim()) {
+            const searchLower = search.toLowerCase().trim();
+            videoItems = videoItems.filter(video => 
+                video.title && video.title.toLowerCase().includes(searchLower)
+            );
+        }
+
+        // Apply pagination manually since we need to filter first
+        const totalFilteredItems = videoItems.length;
+        const paginatedItems = videoItems.slice(offset, offset + limit);
+
+        return {
+            items: paginatedItems,
+            total: totalFilteredItems,
+            page: Math.floor(offset / limit) + 1,
+            offset,
+            limit,
+        };
+    } catch (error) {
+        console.error('Error in getContinueWatching:', error);
+        return {
+            items: [],
+            total: 0,
+            page: 1,
+            offset: 0,
+            limit,
+        };
     }
-
-    const temp = new Video(payload);
-    const err = temp.validateSync();
-    if (err) throw err;
-
-    const doc = await Video.create(payload);
-    return toClientVideo(doc);
 }
-
-
-async function updateVideoById(id, updates = {}) {
-    if (!mongoose.Types.ObjectId.isValid(id)) return null;
-
-    const allowed = [
-        'title','description','year','genres','poster',
-        'videoPath','type','series','episodeNumber','likes'
-    ];
-    const payload = {};
-    for (const k of allowed) if (k in updates) payload[k] = updates[k];
-
-    const updated = await Video.findByIdAndUpdate(
-        id,
-        payload,
-        { new: true, runValidators: true }
-    ).populate('series').lean({ virtuals: true });
-
-    return toClientVideo(updated);
-}
-
-async function deleteVideoById(id) {
-    if (!mongoose.Types.ObjectId.isValid(id)) return false;
-    const res = await Video.findByIdAndDelete(id);
-    return !!res;
-}
-
 
 module.exports = {
     Video,
     Series,
     getCatalog,
+    getContinueWatching,
     generateCatalogFeed,
     findVideoById,
     incrementLikes,

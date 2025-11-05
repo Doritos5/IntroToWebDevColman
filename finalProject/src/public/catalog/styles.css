@@ -1,6 +1,11 @@
 
 /* ------------------------- NavBar page ------------------------- */
 
+/* Hide page header when showing most popular */
+body.most-popular #pageHeader {
+    display: none !important;
+}
+
 body.navbar-page {
     margin: 0;
     position: relative;
@@ -206,58 +211,13 @@ main {
 }
 
 #feedSentinel {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     color: rgba(255, 255, 255, 0.6);
     text-align: center;
-    min-height: 1px;
-    padding: 0;
-}
-
-#feedSentinel.active {
-    padding: 2.5rem 0;
+    padding: 2rem 0;
 }
 
 #feedSentinel.hidden {
     display: none;
-}
-
-.feed-loader {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(0.75rem);
-    transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-.feed-loader.is-visible {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.feed-loader__spinner {
-    width: 1.5rem;
-    height: 1.5rem;
-    border-radius: 50%;
-    border: 0.2rem solid rgba(255, 255, 255, 0.2);
-    border-top-color: #fff;
-    animation: feedLoaderSpin 0.8s linear infinite;
-}
-
-.feed-loader__label {
-    font-size: 0.875rem;
-    letter-spacing: 0.02em;
-}
-
-@keyframes feedLoaderSpin {
-    to {
-        transform: rotate(360deg);
-    }
 }
 
 #videoModal .modal-content {
