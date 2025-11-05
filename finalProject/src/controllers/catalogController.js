@@ -62,12 +62,16 @@ async function renderCatalogPage(req, res, next) {
         }
 
         const videosPerPage = getConfiguredPageSize();
+        
+        // Get all available genres for dynamic navigation
+        const availableGenres = await catalogModel.getAllGenres();
 
         res.render('catalog', {
             catalogFeed: '',
             profileName,
             videosPerPage,
             initialPageSize: INITIAL_PAGE_SIZE,
+            availableGenres,
             cacheBuster: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         });
     } catch (error) {
@@ -162,6 +166,16 @@ async function getCatalogData(req, res) {
             
             // Get genre sections for home page
             genreSections = await catalogModel.getVideosByGenre(10);
+        } else if (sortBy.startsWith('genre:')) {
+            // Genre-specific catalog
+            const genre = sortBy.replace('genre:', '');
+            catalog = await catalogModel.getCatalogByGenre({
+                genre,
+                page,
+                offset: normalizedOffset,
+                limit: videosPerPage,
+                search,
+            });
         } else {
             // Regular catalog (including Most Popular)
             catalog = await catalogModel.getCatalog({

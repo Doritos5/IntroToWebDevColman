@@ -688,6 +688,19 @@ async function setSortBy(sortBy) {
     if (activeSortBy !== sortBy) {
         activeSortBy = sortBy;
         
+        // Update page header based on category
+        const pageHeader = document.getElementById('pageHeader');
+        if (pageHeader) {
+            if (sortBy === 'home') {
+                pageHeader.textContent = 'Continue Watching';
+            } else if (sortBy === 'popular') {
+                pageHeader.textContent = 'Most Popular';
+            } else if (sortBy.startsWith('genre:')) {
+                const genre = sortBy.replace('genre:', '');
+                pageHeader.textContent = genre;
+            }
+        }
+        
         // Reset pagination state when switching categories
         nextOffset = 0;
         totalItems = Infinity;
@@ -1110,6 +1123,10 @@ document.addEventListener('DOMContentLoaded', () => {
             setSortBy('home');
             homeLink.classList.add('active');
             mostPopularLink?.classList.remove('active');
+            // Clear active state from all genre links
+            document.querySelectorAll('[data-genre]').forEach(link => {
+                link.classList.remove('active');
+            });
         }
     });
     
@@ -1120,7 +1137,32 @@ document.addEventListener('DOMContentLoaded', () => {
             setSortBy('popular');
             mostPopularLink.classList.add('active');
             homeLink?.classList.remove('active');
+            // Clear active state from all genre links
+            document.querySelectorAll('[data-genre]').forEach(link => {
+                link.classList.remove('active');
+            });
         }
+    });
+
+    // Genre navigation links
+    document.querySelectorAll('[data-genre]').forEach(genreLink => {
+        genreLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            const genre = e.target.getAttribute('data-genre');
+            // Only process if not already active
+            if (!genreLink.classList.contains('active')) {
+                setSortBy(`genre:${genre}`);
+                genreLink.classList.add('active');
+                homeLink?.classList.remove('active');
+                mostPopularLink?.classList.remove('active');
+                // Clear active state from other genre links
+                document.querySelectorAll('[data-genre]').forEach(link => {
+                    if (link !== genreLink) {
+                        link.classList.remove('active');
+                    }
+                });
+            }
+        });
     });
 
     searchIcon?.addEventListener('click', toggleSearchInput);
