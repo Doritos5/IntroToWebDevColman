@@ -479,5 +479,8 @@ module.exports = {
     findNextVideo,
     findRecommendationsByGenres,
     listEpisodesBySeries,
+    createVideo,
+    updateVideoById,
+    deleteVideoById,
 };
 

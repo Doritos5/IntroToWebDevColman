@@ -11,6 +11,9 @@ const {
     getNextVideo,
     listEpisodes,
     updateVideoProgress,
+    adminCreateVideo,
+    adminUpdateVideo,
+    adminDeleteVideo,
 } = require('../controllers/catalogController');
 
 router.use(ensureAuth);
@@ -26,6 +29,9 @@ router.get('/video/:videoId/progress',  getVideoProgress);
 router.get('/video/:videoId/next', getNextVideo);
 router.get('/videos',  listEpisodes);
 router.post('/video/:videoId/progress', updateVideoProgress);
+router.post('/admin/videos', ensureAuth, ensureAdmin, adminCreateVideo);
+router.put('/admin/videos/:videoId', ensureAuth, ensureAdmin, adminUpdateVideo);
+router.delete('/admin/videos/:videoId', ensureAuth, ensureAdmin, adminDeleteVideo);
 
 module.exports = router;
 
