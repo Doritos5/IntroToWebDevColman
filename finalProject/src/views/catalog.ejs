@@ -78,6 +78,11 @@
         document.addEventListener('click', function(e) {
             if (e.target && e.target.id === 'mostPopularLink') {
                 document.body.classList.add('most-popular');
+                // Clear genre sections when switching to Most Popular
+                const feedContainer = document.querySelector('main .container-xxl') || document.querySelector('main');
+                if (feedContainer) {
+                    feedContainer.querySelectorAll('.genre-section').forEach(section => section.remove());
+                }
             } else if (e.target && e.target.id === 'homeLink') {
                 document.body.classList.remove('most-popular');
             }
@@ -140,25 +145,29 @@
                                     if (data.genreSections && Array.isArray(data.genreSections)) {
                                         setTimeout(() => window.appendGenreSections(data.genreSections), 100);
                                     }
-                                }).catch(() => {});
+                                }).catch(error => console.error('Genre sections fetch failed:', error));
                             }
                             return response;
                         });
                     };
                     
-                    // Load genre sections on page load
+                    // Load genre sections on page load (only if we're on Home category)
                     if (window.location.search.includes('profileId')) {
                         setTimeout(() => {
-                            const profileId = new URLSearchParams(window.location.search).get('profileId');
-                            if (profileId) {
-                                fetch(`/catalog/data?offset=0&limit=10&profileId=${profileId}&sortBy=home&requestCategory=home`)
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const profileId = urlParams.get('profileId');
+                            const sortBy = urlParams.get('sortBy');
+                            
+                            // Validate profileId and check if we're on Home category
+                            if (profileId && profileId.trim() && (!sortBy || sortBy === 'home')) {
+                                fetch(`/catalog/data?offset=0&limit=10&profileId=${encodeURIComponent(profileId)}&sortBy=home&requestCategory=home`)
                                     .then(response => response.json())
                                     .then(data => {
                                         if (data.genreSections && Array.isArray(data.genreSections)) {
                                             window.appendGenreSections(data.genreSections);
                                         }
                                     })
-                                    .catch(() => {});
+                                    .catch(error => console.error('Genre sections loading failed:', error));
                             }
                         }, 1500);
                     }
