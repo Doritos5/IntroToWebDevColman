@@ -466,6 +466,170 @@ async function getContinueWatching({ profileId, offset = 0, limit = 10, search =
     }
 }
 
+async function getVideosByGenre(limit = 10) {
+    try {
+        // Get all unique genres from the videos collection
+        const genres = await Video.distinct('genres', { genres: { $exists: true, $ne: [] } });
+        
+        const genreSections = [];
+        
+        for (const genre of genres) {
+            // For each genre, get the newest videos (by year)
+            // For series, get only the first episode and max 1 per series
+            const videos = await Video.aggregate([
+                // Match videos that have this genre
+                { $match: { genres: genre } },
+                
+                // Sort by year (newest first), then by episodeNumber for series
+                { $sort: { year: -1, episodeNumber: 1 } },
+                
+                // Group series together to get only first episode per series
+                {
+                    $group: {
+                        _id: {
+                            // Group by series ID for series, by video ID for movies
+                            seriesId: { $cond: [{ $eq: ['$type', 'series'] }, '$series', '$_id'] },
+                            type: '$type'
+                        },
+                        firstEpisode: { $first: '$$ROOT' }
+                    }
+                },
+                
+                // Replace root with the first episode document
+                { $replaceRoot: { newRoot: '$firstEpisode' } },
+                
+                // Sort again by year (newest first)
+                { $sort: { year: -1 } },
+                
+                // Limit to specified number of items per genre
+                { $limit: limit }
+            ]);
+            
+            if (videos.length > 0) {
+                genreSections.push({
+                    genre,
+                    videos: videos.map(toClientVideo)
+                });
+            }
+        }
+        
+        return genreSections;
+    } catch (error) {
+        console.error('Error getting videos by genre:', error);
+        return [];
+    }
+}
+
+/**
+ * Get all unique genres from the video collection
+ * @returns {Promise<string[]>} Array of genre names
+ */
+async function getAllGenres() {
+    try {
+        const genres = await Video.distinct('genres');
+        return genres.filter(genre => genre && genre.trim()).sort();
+    } catch (error) {
+        console.error('Error getting genres:', error);
+        return [];
+    }
+}
+
+/**
+ * Get videos for a specific genre with pagination
+ * @param {string} genre - Genre name
+ * @param {Object} options - Pagination and search options
+ * @returns {Promise<Object>} Paginated catalog for genre
+ */
+async function getCatalogByGenre({ genre, page = 1, offset, limit = 10, search = '' }) {
+    try {
+        const pageNumber = Math.max(1, Number(page));
+        const pageSize = Math.max(1, Number(limit));
+        const searchCondition = search
+            ? { title: { $regex: search, $options: 'i' } }
+            : {};
+
+        // Build aggregation pipeline
+        const pipeline = [
+            // Match genre and search conditions
+            {
+                $match: {
+                    genres: genre,
+                    ...searchCondition
+                }
+            },
+            
+            // Group series to get only first episodes
+            {
+                $group: {
+                    _id: {
+                        seriesId: { $ifNull: ['$series', '$_id'] },
+                        type: '$type'
+                    },
+                    doc: { $first: '$$ROOT' }
+                }
+            },
+            
+            // Replace root with the document
+            { $replaceRoot: { newRoot: '$doc' } },
+            
+            // Sort by year (newest first), then by title
+            { $sort: { year: -1, title: 1 } }
+        ];
+
+        // Add pagination
+        if (offset !== undefined) {
+            const skipAmount = Math.max(0, Number(offset));
+            pipeline.push({ $skip: skipAmount });
+        } else {
+            const skipAmount = (pageNumber - 1) * pageSize;
+            pipeline.push({ $skip: skipAmount });
+        }
+        
+        pipeline.push({ $limit: pageSize });
+
+        const videos = await Video.aggregate(pipeline);
+        
+        // Get total count for pagination
+        const countPipeline = [
+            {
+                $match: {
+                    genres: genre,
+                    ...searchCondition
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        seriesId: { $ifNull: ['$series', '$_id'] },
+                        type: '$type'
+                    }
+                }
+            },
+            { $count: 'total' }
+        ];
+        
+        const countResult = await Video.aggregate(countPipeline);
+        const totalCount = countResult[0]?.total || 0;
+
+        return {
+            items: videos.map(toClientVideo),
+            total: totalCount,
+            page: pageNumber,
+            offset: offset !== undefined ? Math.max(0, Number(offset)) : (pageNumber - 1) * pageSize,
+            limit: pageSize,
+        };
+    } catch (error) {
+        console.error('Error getting catalog by genre:', error);
+        return {
+            items: [],
+            total: 0,
+            page: 1,
+            offset: 0,
+            limit: limit,
+        };
+    }
+}
+
 module.exports = {
     Video,
     Series,
@@ -479,8 +643,8 @@ module.exports = {
     findNextVideo,
     findRecommendationsByGenres,
     listEpisodesBySeries,
-    createVideo,
-    updateVideoById,
-    deleteVideoById,
+    getVideosByGenre,
+    getAllGenres,
+    getCatalogByGenre,
 };
 

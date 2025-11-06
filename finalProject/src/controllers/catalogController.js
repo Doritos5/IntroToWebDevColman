@@ -62,12 +62,16 @@ async function renderCatalogPage(req, res, next) {
         }
 
         const videosPerPage = getConfiguredPageSize();
+        
+        // Get all available genres for dynamic navigation
+        const availableGenres = await catalogModel.getAllGenres();
 
         res.render('catalog', {
             catalogFeed: '',
             profileName,
             videosPerPage,
             initialPageSize: INITIAL_PAGE_SIZE,
+            availableGenres,
             cacheBuster: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         });
     } catch (error) {
@@ -149,10 +153,25 @@ async function getCatalogData(req, res) {
             }
         }
         let catalog;
+        let genreSections = [];
+        
         if (sortBy === 'home' && profileId) {
             // Continue Watching: Get videos with viewing progress for this profile
             catalog = await catalogModel.getContinueWatching({
                 profileId,
+                offset: normalizedOffset,
+                limit: videosPerPage,
+                search,
+            });
+            
+            // Get genre sections for home page
+            genreSections = await catalogModel.getVideosByGenre(10);
+        } else if (sortBy.startsWith('genre:')) {
+            // Genre-specific catalog
+            const genre = sortBy.replace('genre:', '');
+            catalog = await catalogModel.getCatalogByGenre({
+                genre,
+                page,
                 offset: normalizedOffset,
                 limit: videosPerPage,
                 search,
@@ -167,6 +186,10 @@ async function getCatalogData(req, res) {
                 sortBy,
             });
         }
+        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
+        
         res.json({
             catalog: catalog.items,
             likedContent,
@@ -176,6 +199,8 @@ async function getCatalogData(req, res) {
             totalPages: Math.ceil(catalog.total / catalog.limit),
             limit: catalog.limit,
             requestCategory,
+            genreSections, // Include genre sections for home page
+            timestamp: Date.now(), // Force fresh data
         });
     } catch (error) {
         console.error('Error fetching catalog data:', error);
