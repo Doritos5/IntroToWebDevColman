@@ -55,13 +55,18 @@
                     </div>
                 <% } %>
 
-                <div class="dropdown ms-3">
+                <div class="dropdown ms-3" data-bs-auto-close="outside">
                     <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="avatarMenu" data-bs-toggle="dropdown">
                         <img src="/images/netflix_profile.jpg" alt="User" class="rounded user-avatar">
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end text-small shadow">
                         <li><a class="dropdown-item" href="/profiles_page">Profile</a></li>
-                        <li><a class="dropdown-item" href="#">Settings</a></li>
+                        <li class="dropdown-submenu">
+                            <a class="dropdown-item" href="#" id="settingsToggle">Settings ▸</a>
+                            <ul class="dropdown-menu" id="settingsMenu">
+                                <li><a class="dropdown-item" href="/analytics">Analytics</a></li>
+                            </ul>
+                        </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <form action="/logout" method="POST" style="margin:0;">
@@ -304,5 +309,29 @@
         <ul class="list-group list-group-flush" id="episodeList"></ul>
     </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const toggle = document.getElementById('settingsToggle');
+    const menu   = document.getElementById('settingsMenu');
+
+    if (toggle && menu) {
+      toggle.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        menu.classList.toggle('show');
+      });
+    }
+
+    document.querySelectorAll('.dropdown')
+      .forEach(dd => dd.addEventListener('hidden.bs.dropdown', () => {
+        document
+          .querySelectorAll('.dropdown-submenu .dropdown-menu.show')
+          .forEach(m => m.classList.remove('show'));
+      }));
+  });
+</script>
 </body>
 </html>

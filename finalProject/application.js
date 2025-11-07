@@ -13,6 +13,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const catalogRoutes = require('./src/routes/catalogRoutes');
 const profileRoutes = require('./src/routes/profileRoutes');
 const likeRoutes = require('./src/routes/likeRoutes');
+const analyticsRoutes = require('./src/routes/analyticsRoutes');
 const { logger } = require("./src/middleware/logger");
 const { connectToDatabase } = require('./src/utils/db');
 
@@ -52,6 +53,8 @@ app.use('/', authRoutes);
 app.use('/catalog', catalogRoutes);
 app.use('/profiles', profileRoutes);
 app.use('/likes', likeRoutes);
+app.use('/analytics', analyticsRoutes);
+
 
 async function startServer() {
     try {
