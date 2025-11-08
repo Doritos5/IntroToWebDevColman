@@ -610,6 +610,14 @@ async function fetchCatalogPage() {
         const catalogItems = Array.isArray(data.catalog) ? data.catalog : [];
         appendVideos(catalogItems);
 
+        // Clear Most Popular section if we're searching (it will be recreated below if there are matching results)
+        if (activeSearchTerm && activeSearchTerm.trim()) {
+            const existingSection = document.getElementById('most-popular-section');
+            const existingHeader = document.getElementById('most-popular-header');
+            if (existingSection) existingSection.remove();
+            if (existingHeader) existingHeader.remove();
+        }
+
         // Handle Most Popular section for Home category only
         if (activeSortBy === 'home' && data.mostPopular && Array.isArray(data.mostPopular) && data.mostPopular.length > 0) {
             let mostPopularToShow = data.mostPopular;
@@ -622,7 +630,8 @@ async function fetchCatalogPage() {
                 );
             }
             
-            if (window.appendMostPopularSection) {
+            // Only show Most Popular section if there are items to display after filtering
+            if (window.appendMostPopularSection && mostPopularToShow.length > 0) {
                 window.appendMostPopularSection(mostPopularToShow);
             }
         }

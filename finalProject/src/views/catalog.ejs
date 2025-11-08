@@ -286,7 +286,7 @@
                                         }
                                         
                                         setTimeout(() => {
-                                            if (window.appendMostPopularSection) {
+                                            if (window.appendMostPopularSection && mostPopularToShow.length > 0) {
                                                 window.appendMostPopularSection(mostPopularToShow);
                                             }
                                         }, 50); // Show Most Popular before genre sections
@@ -310,7 +310,7 @@
                                     .then(response => response.json())
                                     .then(data => {
                                         // Handle Most Popular section
-                                        if (data.mostPopular && Array.isArray(data.mostPopular) && window.appendMostPopularSection) {
+                                        if (data.mostPopular && Array.isArray(data.mostPopular) && data.mostPopular.length > 0 && window.appendMostPopularSection) {
                                             window.appendMostPopularSection(data.mostPopular);
                                         }
                                         // Handle genre sections
