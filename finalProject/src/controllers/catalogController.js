@@ -154,6 +154,7 @@ async function getCatalogData(req, res) {
         }
         let catalog;
         let genreSections = [];
+        let mostPopular = null;
         
         if (sortBy === 'home' && profileId) {
             // Continue Watching: Get videos with viewing progress for this profile
@@ -163,6 +164,11 @@ async function getCatalogData(req, res) {
                 limit: videosPerPage,
                 search,
             });
+            
+            // Get Most Popular section (max 10 items)
+            if (!hasOffset || normalizedOffset === 0) {
+                mostPopular = await catalogModel.getMostPopular(10);
+            }
             
             // Get genre sections for home page
             genreSections = await catalogModel.getVideosByGenre(10);
@@ -200,6 +206,7 @@ async function getCatalogData(req, res) {
             limit: catalog.limit,
             requestCategory,
             genreSections, // Include genre sections for home page
+            mostPopular: sortBy === 'home' ? mostPopular : undefined,
             timestamp: Date.now(), // Force fresh data
         });
     } catch (error) {

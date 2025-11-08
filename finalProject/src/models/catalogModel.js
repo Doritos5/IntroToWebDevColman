@@ -630,6 +630,40 @@ async function getCatalogByGenre({ genre, page = 1, offset, limit = 10, search =
     }
 }
 
+async function getMostPopular(limit = 10) {
+    try {
+        const videos = await Video.aggregate([
+            // Sort by likes
+            { $sort: { likes: -1, episodeNumber: 1 } },
+            
+            // Group series together to get only first episode per series
+            {
+                $group: {
+                    _id: {
+                        // Group by series ID for series, by video ID for movies
+                        seriesId: { $cond: [{ $eq: ['$type', 'series'] }, '$series', '$_id'] },
+                        type: '$type'
+                    },
+                    firstEpisode: { $first: '$$ROOT' }
+                }
+            },
+            
+            { $replaceRoot: { newRoot: '$firstEpisode' } },
+            
+            // Sort by likes (descending)
+            { $sort: { likes: -1 } },
+            
+            // Limit to specified number of items
+            { $limit: limit }
+        ]);
+
+        return videos.map(toClientVideo);
+    } catch (error) {
+        console.error('Error getting most popular videos:', error);
+        return [];
+    }
+}
+
 module.exports = {
     Video,
     Series,
@@ -646,5 +680,6 @@ module.exports = {
     getVideosByGenre,
     getAllGenres,
     getCatalogByGenre,
+    getMostPopular,
 };
 

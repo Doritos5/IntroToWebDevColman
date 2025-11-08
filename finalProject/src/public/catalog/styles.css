@@ -1,11 +1,6 @@
 
 /* ------------------------- NavBar page ------------------------- */
 
-/* Hide page header when showing most popular */
-body.most-popular #pageHeader {
-    display: none !important;
-}
-
 body.navbar-page {
     margin: 0;
     position: relative;

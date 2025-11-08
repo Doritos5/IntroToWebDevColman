@@ -107,6 +107,11 @@ function createCardHTML(item) {
       </div>`;
 }
 
+// Make createCardHTML and caches available globally for use in EJS view
+window.createCardHTML = createCardHTML;
+window.videoCache = videoCache;
+window.episodesMap = episodesMap;
+
 function appendVideos(videos) {
     const fragment = document.createDocumentFragment();
     videos.forEach((video) => {
@@ -605,6 +610,23 @@ async function fetchCatalogPage() {
         const catalogItems = Array.isArray(data.catalog) ? data.catalog : [];
         appendVideos(catalogItems);
 
+        // Handle Most Popular section for Home category only
+        if (activeSortBy === 'home' && data.mostPopular && Array.isArray(data.mostPopular) && data.mostPopular.length > 0) {
+            let mostPopularToShow = data.mostPopular;
+            
+            // Filter Most Popular based on search if searching
+            if (activeSearchTerm && activeSearchTerm.trim()) {
+                const searchLower = activeSearchTerm.toLowerCase().trim();
+                mostPopularToShow = data.mostPopular.filter(video => 
+                    video.title && video.title.toLowerCase().includes(searchLower)
+                );
+            }
+            
+            if (window.appendMostPopularSection) {
+                window.appendMostPopularSection(mostPopularToShow);
+            }
+        }
+
         // Handle search results and no-results message for all categories
         if (activeSearchTerm && isFirstBatch) {
             if (activeSortBy === 'home') {
@@ -722,6 +744,7 @@ function resetFeedForSort() {
     feed.innerHTML = '';
     videoCache = new Map();
     setLoadingState(false);
+    
     if (sentinel) {
         // Hide sentinel during search, show for normal pagination
         if (activeSearchTerm && activeSearchTerm.trim()) {
@@ -746,8 +769,6 @@ async function setSortBy(sortBy) {
             pageHeader.style.display = 'block';
             if (sortBy === 'home') {
                 pageHeader.textContent = 'Continue Watching';
-            } else if (sortBy === 'popular') {
-                pageHeader.textContent = 'Most Popular';
             } else if (sortBy.startsWith('genre:')) {
                 const genre = sortBy.replace('genre:', '');
                 pageHeader.textContent = genre;
@@ -1356,7 +1377,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Navigation links
     const homeLink = document.getElementById('homeLink');
-    const mostPopularLink = document.getElementById('mostPopularLink');
     
     homeLink?.addEventListener('click', (e) => {
         e.preventDefault();
@@ -1364,21 +1384,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!homeLink.classList.contains('active')) {
             setSortBy('home');
             homeLink.classList.add('active');
-            mostPopularLink?.classList.remove('active');
-            // Clear active state from all genre links
-            document.querySelectorAll('[data-genre]').forEach(link => {
-                link.classList.remove('active');
-            });
-        }
-    });
-    
-    mostPopularLink?.addEventListener('click', (e) => {
-        e.preventDefault();
-        // Only process if not already active
-        if (!mostPopularLink.classList.contains('active')) {
-            setSortBy('popular');
-            mostPopularLink.classList.add('active');
-            homeLink?.classList.remove('active');
             // Clear active state from all genre links
             document.querySelectorAll('[data-genre]').forEach(link => {
                 link.classList.remove('active');
@@ -1396,7 +1401,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 setSortBy(`genre:${genre}`);
                 genreLink.classList.add('active');
                 homeLink?.classList.remove('active');
-                mostPopularLink?.classList.remove('active');
                 // Clear active state from other genre links
                 document.querySelectorAll('[data-genre]').forEach(link => {
                     if (link !== genreLink) {
