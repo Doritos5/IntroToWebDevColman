@@ -76,8 +76,6 @@ function ensureProfileSelected() {
 
 function createCardHTML(item) {
     const isLiked = likedIds.has(item.id);
-    const buttonText = isLiked ? 'Liked' : 'Like';
-    const buttonClass = isLiked ? 'btn-danger' : 'btn-outline-light';
     const badges = (item.genres || [])
         .map((genre) => `<span class="badge text-bg-secondary me-1 mb-1">${genre}</span>`)
         .join('');
@@ -86,9 +84,19 @@ function createCardHTML(item) {
         ? `<p class="card-text text-white-50 small mb-3">${item.description.slice(0, 90)}${item.description.length > 90 ? '…' : ''}</p>`
         : '';
 
+    // Determine content type
+    const isMovie = item.type === 'movie';
+    const typeIcon = isMovie 
+        ? '<i class="bi bi-film text-warning"></i>' 
+        : '<i class="bi bi-collection-play text-warning"></i>';
+    const typeTooltip = isMovie ? 'Movie' : 'Series';
+
     return `
       <div class="col-6 col-md-4 col-lg-3 mb-4">
-        <div class="card h-100 bg-dark text-white" data-video-id="${item.id}">
+        <div class="card h-100 bg-dark text-white position-relative" data-video-id="${item.id}">
+          <div class="type-icon-badge" title="${typeTooltip}">
+            ${typeIcon}
+          </div>
           <img src="${item.poster}" class="card-img-top" alt="${item.title}">
           <div class="card-body d-flex flex-column">
             <h5 class="card-title mb-1">${item.title}</h5>
@@ -96,17 +104,17 @@ function createCardHTML(item) {
             ${descriptionSnippet}
             <div class="mb-3">${badges}</div>
             <div class="mt-auto">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="small">
-                  <i class="bi bi-heart-fill text-danger me-1"></i>
-                  <span data-likes-id="${item.id}">${item.likes ?? 0}</span>
-                </span>
-                <span class="small text-warning">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="like-container" data-item-id="${item.id}" data-like-button>
+                  <i class="bi ${isLiked ? 'bi-heart-fill' : 'bi-heart'} like-heart ${isLiked ? 'liked' : ''}" 
+                     data-item-id="${item.id}"></i>
+                  <span class="like-count ms-1" data-likes-id="${item.id}">${item.likes ?? 0}</span>
+                </div>
+                <span class="text-warning rating-display">
                   <i class="bi bi-star-fill me-1"></i>
                   ${item.rating ? item.rating.toFixed(1) : '0.0'}
                 </span>
               </div>
-              <button class="btn btn-sm ${buttonClass} w-100" data-item-id="${item.id}" data-like-button>${buttonText}</button>
             </div>
           </div>
         </div>
@@ -117,6 +125,43 @@ function createCardHTML(item) {
 window.createCardHTML = createCardHTML;
 window.videoCache = videoCache;
 window.episodesMap = episodesMap;
+
+function addInteractions() {
+    // Add parallax effect to cards
+    document.addEventListener('mousemove', (e) => {
+        const cards = document.querySelectorAll('.card');
+        
+        cards.forEach(card => {
+            const rect = card.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            const deltaX = (e.clientX - centerX) / rect.width;
+            const deltaY = (e.clientY - centerY) / rect.height;
+            
+            // Tilt effect
+            if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) {
+                const rotateY = deltaX * 5;
+                const rotateX = -deltaY * 5;
+                
+                card.style.transform = `perspective(1000px) rotateY(${rotateY}deg) rotateX(${rotateX}deg) translateZ(10px)`;
+            } else {
+                card.style.transform = '';
+            }
+        });
+    });
+
+    // Reset transforms when mouse leaves the page
+    document.addEventListener('mouseleave', () => {
+        document.querySelectorAll('.like-container, .card').forEach(el => {
+            el.style.transform = '';
+            el.style.filter = '';
+        });
+    });
+}
+
+// Initialize interactions when page loads
+setTimeout(addInteractions, 1000);
 
 function appendVideos(videos) {
     const fragment = document.createDocumentFragment();
@@ -1196,9 +1241,9 @@ async function openVideoModal(video) {
 }
 
 function handleFeedClick(event) {
-    const likeButton = event.target.closest('[data-like-button]');
-    if (likeButton) {
-        handleLikeButton(likeButton);
+    const likeContainer = event.target.closest('[data-like-button]');
+    if (likeContainer) {
+        handleHeartLike(likeContainer);
         event.stopPropagation();
         return;
     }
@@ -1234,8 +1279,8 @@ function rainbow(btn) {
     }, { once: true });
 }
 
-async function handleLikeButton(button) {
-    const itemId = button.dataset.itemId;
+async function handleHeartLike(likeContainer) {
+    const itemId = likeContainer.dataset.itemId;
     const profileId = getProfileId();
 
     if (!itemId || !profileId) {
@@ -1243,10 +1288,23 @@ async function handleLikeButton(button) {
         return;
     }
 
-    const isUnlike = button.classList.contains('btn-danger');
-    const endpoint = isUnlike ? '/likes/unlike' : '/likes/like';
+    const heartIcon = likeContainer.querySelector('.like-heart');
+    const likesSpan = likeContainer.querySelector('.like-count');
+    
+    if (!heartIcon || !likesSpan) return;
 
-    button.disabled = true;
+    const isCurrentlyLiked = heartIcon.classList.contains('liked');
+    const endpoint = isCurrentlyLiked ? '/likes/unlike' : '/likes/like';
+
+    // Prevent double-clicking
+    if (likeContainer.dataset.processing === 'true') return;
+    likeContainer.dataset.processing = 'true';
+
+    // Add ripple effect
+    likeContainer.classList.add('ripple');
+    setTimeout(() => {
+        likeContainer.classList.remove('ripple');
+    }, 600);
 
     try {
         const response = await fetch(endpoint, {
@@ -1260,30 +1318,160 @@ async function handleLikeButton(button) {
             throw new Error(result.message || 'Failed to process request');
         }
 
-        const likesSpan = document.querySelector(`[data-likes-id="${itemId}"]`);
-        if (likesSpan) {
-            likesSpan.textContent = result.newLikesCount;
-        }
-
-        if (isUnlike) {
+        if (isCurrentlyLiked) {
             likedIds.delete(itemId);
-            button.textContent = 'Like';
-            button.classList.remove('btn-danger');
-            button.classList.add('btn-outline-light');
+            heartIcon.classList.remove('liked', 'bi-heart-fill');
+            heartIcon.classList.add('bi-heart');
+            
+            animateCounterDown(likesSpan, parseInt(likesSpan.textContent), result.newLikesCount);
+            
         } else {
             likedIds.add(itemId);
-            button.textContent = 'Liked';
-            button.classList.remove('btn-outline-light');
-            button.classList.add('btn-danger');
-            popHeart(button);
-            rainbow(button);
+            heartIcon.classList.remove('bi-heart');
+            heartIcon.classList.add('bi-heart-fill', 'liked');
+            
+            createParticleBurst(likeContainer);
+            createFloatingHearts(likeContainer);
+            animateCounterUp(likesSpan, parseInt(likesSpan.textContent), result.newLikesCount);
         }
     } catch (error) {
         console.error('Like/Unlike error:', error);
         alert(error.message);
     } finally {
-        button.disabled = false;
+        setTimeout(() => {
+            likeContainer.dataset.processing = 'false';
+        }, 200);
     }
+}
+
+function createParticleBurst(container) {
+    const rect = container.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    const burstContainer = document.createElement('div');
+    burstContainer.className = 'particle-burst';
+    burstContainer.style.left = centerX + 'px';
+    burstContainer.style.top = centerY + 'px';
+    
+    for (let i = 0; i < 12; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        
+        const angle = (i / 12) * Math.PI * 2;
+        const velocity = 20 + Math.random() * 30;
+        const size = 3 + Math.random() * 4;
+        
+        particle.style.width = size + 'px';
+        particle.style.height = size + 'px';
+        particle.style.left = '0px';
+        particle.style.top = '0px';
+        
+        // Set custom animation with random trajectory
+        const endX = Math.cos(angle) * velocity;
+        const endY = Math.sin(angle) * velocity;
+        
+        particle.style.setProperty('--end-x', endX + 'px');
+        particle.style.setProperty('--end-y', endY + 'px');
+        
+        // Dynamic animation keyframes
+        particle.style.animation = `particleExplode 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`;
+        particle.style.transform = `translate(${endX}px, ${endY}px)`;
+        
+        burstContainer.appendChild(particle);
+    }
+    
+    document.body.appendChild(burstContainer);
+    
+    // Clean up
+    setTimeout(() => {
+        burstContainer.remove();
+    }, 1200);
+}
+
+function createFloatingHearts(container) {
+    const rect = container.getBoundingClientRect();
+    const baseX = rect.left + rect.width / 2;
+    const baseY = rect.top + rect.height / 2;
+    
+    for (let i = 1; i <= 3; i++) {
+        const heart = document.createElement('i');
+        heart.className = `bi bi-heart-fill floating-heart-modern heart-${i}`;
+        
+        // Slight offset for each heart
+        const offsetX = (Math.random() - 0.5) * 20;
+        const offsetY = (Math.random() - 0.5) * 10;
+        
+        heart.style.left = (baseX + offsetX) + 'px';
+        heart.style.top = (baseY + offsetY) + 'px';
+        
+        document.body.appendChild(heart);
+        
+        // Clean up after animation
+        const animationDuration = i === 2 ? 2200 : i === 3 ? 1800 : 2000;
+        setTimeout(() => {
+            heart.remove();
+        }, animationDuration);
+    }
+}
+
+function animateCounterUp(element, startValue, endValue) {
+    element.classList.add('animate-up');
+    
+    // Create number morphing effect
+    const duration = 800;
+    const startTime = performance.now();
+    
+    function updateNumber(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Use easing function for smooth animation
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        const currentValue = Math.round(startValue + (endValue - startValue) * easeOut);
+        
+        element.textContent = currentValue;
+        
+        if (progress < 1) {
+            requestAnimationFrame(updateNumber);
+        } else {
+            element.textContent = endValue;
+            setTimeout(() => {
+                element.classList.remove('animate-up');
+            }, 100);
+        }
+    }
+    
+    requestAnimationFrame(updateNumber);
+}
+
+function animateCounterDown(element, startValue, endValue) {
+    element.classList.add('animate-down');
+    
+    // Simple fade and scale animation for down
+    const duration = 600;
+    const startTime = performance.now();
+    
+    function updateNumber(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        const easeOut = 1 - Math.pow(1 - progress, 2);
+        const currentValue = Math.round(startValue + (endValue - startValue) * easeOut);
+        
+        element.textContent = currentValue;
+        
+        if (progress < 1) {
+            requestAnimationFrame(updateNumber);
+        } else {
+            element.textContent = endValue;
+            setTimeout(() => {
+                element.classList.remove('animate-down');
+            }, 100);
+        }
+    }
+    
+    requestAnimationFrame(updateNumber);
 }
 
 function setupModalEvents() {
