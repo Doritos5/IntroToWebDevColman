@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SuperNetflix</title>
 
-    <link href="/catalog/styles.css" rel="stylesheet" />
+    <link href="/catalog/styles.css?v=<%= cacheBuster %>&t=<%= Date.now() %>" rel="stylesheet" />
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
@@ -17,7 +17,7 @@
     I remove this line the search buttons won't work as the JS looking for the buttons return null because they are
     not loaded yet
     -->
-    <script src="/catalog/app.js" defer></script>
+    <script src="/catalog/app.js?v=<%= cacheBuster %>&t=<%= Date.now() %>" defer></script>
 </head>
 <body class="navbar-page">
 
@@ -29,6 +29,15 @@
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item"><a class="nav-link active" href="#" id="homeLink">Home</a></li>
                 <li class="nav-item"><a class="nav-link" href="#" id="mostPopularLink">Most Popular</a></li>
+                <% if (typeof availableGenres !== 'undefined' && availableGenres && availableGenres.length > 0) { %>
+                    <% availableGenres.forEach(genre => { %>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" id="genre<%= genre.replace(/[^a-zA-Z0-9]/g, '') %>Link" data-genre="<%= genre %>">
+                                <%= genre %>
+                            </a>
+                        </li>
+                    <% }); %>
+                <% } %>
             </ul>
 
             <div class="d-flex align-items-center">
@@ -74,8 +83,150 @@
   <div id="recommended-grid" class="row"></div>
 </section>
     <header class="mb-4">
-        <h2 class="h4 text-white-50 mb-0">Continue Watching</h2>
+        <h2 class="h4 text-white-50 mb-0" id="pageHeader">Continue Watching</h2>
     </header>
+    
+    <script>
+        // Navigation handling for categories and genres
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.id === 'mostPopularLink') {
+                document.body.classList.add('most-popular');
+                // Clear genre sections when switching to Most Popular
+                const feedContainer = document.querySelector('main .container-xxl') || document.querySelector('main');
+                if (feedContainer) {
+                    feedContainer.querySelectorAll('.genre-section').forEach(section => section.remove());
+                }
+            } else if (e.target && e.target.id === 'homeLink') {
+                document.body.classList.remove('most-popular');
+            } else if (e.target && e.target.hasAttribute('data-genre')) {
+                // Handle genre navigation
+                document.body.classList.add('most-popular'); // Hide header for genre categories
+                // Clear genre sections when switching to a specific genre
+                const feedContainer = document.querySelector('main .container-xxl') || document.querySelector('main');
+                if (feedContainer) {
+                    feedContainer.querySelectorAll('.genre-section').forEach(section => section.remove());
+                }
+            }
+        });
+        
+        // Genre sections functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                if (typeof window.appendGenreSections === 'undefined') {
+                    // Create genre sections function
+                    window.appendGenreSections = function(genreSections) {
+                        const feedContainer = document.querySelector('main .container-xxl') || document.querySelector('main');
+                        if (!feedContainer || !genreSections) return;
+                        
+                        feedContainer.querySelectorAll('.genre-section').forEach(section => section.remove());
+                        
+                        genreSections.forEach((section) => {
+                            if (section.videos && section.videos.length > 0) {
+                                const sectionContainer = document.createElement('div');
+                                sectionContainer.className = 'mb-5 genre-section';
+                                
+                                const header = document.createElement('header');
+                                header.className = 'mb-4';
+                                header.innerHTML = `<h2 class="h4 text-white-50 mb-0 clickable-genre-title" data-genre="${section.genre}" style="cursor: pointer; transition: color 0.2s ease;">${section.genre}</h2>`;
+                                
+                                // Add click handler to navigate to genre category
+                                const titleElement = header.querySelector('.clickable-genre-title');
+                                titleElement.addEventListener('click', () => {
+                                    const genre = section.genre;
+                                    
+                                    // Update navigation active states
+                                    document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+                                    const genreLink = document.querySelector(`[data-genre="${genre}"]`);
+                                    if (genreLink) {
+                                        genreLink.classList.add('active');
+                                    }
+                                    
+                                    // Trigger genre navigation using existing setSortBy function
+                                    if (typeof window.setSortBy === 'function') {
+                                        window.setSortBy(`genre:${genre}`);
+                                    } else {
+                                        // Fallback: trigger genre link click if setSortBy not available
+                                        if (genreLink) {
+                                            genreLink.click();
+                                        }
+                                    }
+                                });
+                                
+                                // Add hover effects
+                                titleElement.addEventListener('mouseenter', () => {
+                                    titleElement.style.color = '#ffffff';
+                                });
+                                titleElement.addEventListener('mouseleave', () => {
+                                    titleElement.style.color = '';
+                                });
+                                
+                                const videosGrid = document.createElement('div');
+                                videosGrid.className = 'row row-cols-1 row-cols-md-3 mx-4 my-6 text-center';
+                                
+                                section.videos.forEach((video) => {
+                                    const cardHTML = window.createCardHTML ? window.createCardHTML(video) : 
+                                        `<div class="col-6 col-md-4 col-lg-3 mb-4">
+                                            <div class="card h-100 bg-dark text-white" data-video-id="${video.id}">
+                                                <img src="${video.poster}" class="card-img-top" alt="${video.title}">
+                                                <div class="card-body">
+                                                    <h5 class="card-title">${video.title}</h5>
+                                                    <div class="small text-white-50">${video.year || ''}</div>
+                                                </div>
+                                            </div>
+                                        </div>`;
+                                    
+                                    const wrapper = document.createElement('div');
+                                    wrapper.innerHTML = cardHTML;
+                                    videosGrid.appendChild(wrapper.firstElementChild);
+                                });
+                                
+                                sectionContainer.appendChild(header);
+                                sectionContainer.appendChild(videosGrid);
+                                feedContainer.appendChild(sectionContainer);
+                            }
+                        });
+                    };
+                    
+                    // Intercept AJAX calls for genre sections
+                    const originalFetch = window.fetch;
+                    window.fetch = function(...args) {
+                        return originalFetch.apply(this, args).then(response => {
+                            if (response.url.includes('/catalog/data') && response.url.includes('sortBy=home')) {
+                                const clonedResponse = response.clone();
+                                clonedResponse.json().then(data => {
+                                    if (data.genreSections && Array.isArray(data.genreSections)) {
+                                        setTimeout(() => window.appendGenreSections(data.genreSections), 100);
+                                    }
+                                }).catch(error => console.error('Genre sections fetch failed:', error));
+                            }
+                            return response;
+                        });
+                    };
+                    
+                    // Load genre sections on page load (only if we're on Home category)
+                    if (window.location.search.includes('profileId')) {
+                        setTimeout(() => {
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const profileId = urlParams.get('profileId');
+                            const sortBy = urlParams.get('sortBy');
+                            
+                            // Validate profileId and check if we're on Home category
+                            if (profileId && profileId.trim() && (!sortBy || sortBy === 'home')) {
+                                fetch(`/catalog/data?offset=0&limit=10&profileId=${encodeURIComponent(profileId)}&sortBy=home&requestCategory=home`)
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.genreSections && Array.isArray(data.genreSections)) {
+                                            window.appendGenreSections(data.genreSections);
+                                        }
+                                    })
+                                    .catch(error => console.error('Genre sections loading failed:', error));
+                            }
+                        }, 1500);
+                    }
+                }
+            }, 500);
+        });
+    </script>
 
     <div
             class="row row-cols-1 row-cols-md-3 mx-4 my-6 text-center"

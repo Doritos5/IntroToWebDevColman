@@ -1,12 +1,19 @@
 document.addEventListener('DOMContentLoaded', () => {
     const addForm = document.getElementById('add-profile-form');
     const profileNameInput = document.getElementById('profileName');
-    const messageContainer = document.getElementById('message-container');
-    const profileList = document.getElementById('profiles-list'); // רשימת הפרופילים למחיקה
+    let messageContainer = document.getElementById('message-container');
+    const profileList = document.getElementById('profiles-list');
+
+    if (!messageContainer) {
+        messageContainer = document.createElement('div');
+        messageContainer.id = 'message-container';
+        messageContainer.setAttribute('aria-live', 'polite');
+    }
+    profileNameInput.insertAdjacentElement('afterend', messageContainer);
 
     function showMessage(message, isError = false) {
         messageContainer.textContent = message;
-        messageContainer.className = isError ? 'alert alert-danger mt-3' : 'alert alert-success mt-3';
+        messageContainer.className = isError ? 'alert alert-danger mt-2' : 'alert alert-success mt-2';
     }
 
     if (addForm) {
@@ -21,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('/profiles', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profileName: profileName }),
+                    body: JSON.stringify({ profileName }),
                     credentials: 'include'
                 });
 
@@ -45,9 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const profileId = button.dataset.profileId;
                 const profileName = button.closest('li').querySelector('span').textContent;
                 const isConfirmed = confirm(`האם אתה בטוח שברצונך למחוק את "${profileName}"?`);
-                if (!isConfirmed) {
-                    return;
-                }
+                if (!isConfirmed) return;
+
                 try {
                     const response = await fetch(`/profiles/${profileId}`, {
                         method: 'DELETE',
