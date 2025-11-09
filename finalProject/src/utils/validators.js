@@ -5,7 +5,7 @@ function isValidEmail(email) {
 }
 
 function isValidPassword(password) {
-    return typeof password === 'string' && password.trim().length >= 3;
+    return typeof password === 'string' && password.trim().length >= 6;
 }
 
 function isValidUsername(username) {

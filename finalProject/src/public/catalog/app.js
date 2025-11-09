@@ -22,13 +22,23 @@ const episodeDrawerElement = document.getElementById('episodeDrawer');
 const episodeDrawerLabel = document.getElementById('episodeDrawerLabel');
 const episodeListElement = document.getElementById('episodeList');
 const episodeListButton = document.getElementById('episodeListButton');
+const initialLoadSize = feed?.dataset.initialSize;
+const standardLoadSize = feed?.dataset.pageSize;
+const MINIMUM_LOADER_DURATION_MS = 2000;
+const feedLoader = document.getElementById('feedLoader');
 
-const pageSize = Number(feed?.dataset.pageSize || 12);
+if (feedLoader) {
+    feedLoader.classList.remove('is-visible');
+    feedLoader.setAttribute('aria-hidden', 'true');
+}
 
-let currentPage = 0;
-let totalPages = Infinity;
+let nextOffset = 0;
+let totalItems = Infinity;
+let isFirstBatch = true;
 let isLoading = false;
+let currentRequestId = 0;
 let activeSearchTerm = '';
+let activeSortBy = 'home';
 let likedIds = new Set();
 let observer;
 let modalInstance;
@@ -57,7 +67,7 @@ function ensureProfileSelected() {
     }
 
     if (greetingBanner) {
-        greetingBanner.textContent = `Hello, ${profileName}`;
+        greetingBanner.textContent = `Hi, ${profileName}`;
     }
 
     return { selectedProfileId, profileName };
@@ -108,9 +118,37 @@ function appendVideos(videos) {
     feed.appendChild(fragment);
 }
 
+function setLoadingState(active) {
+    if (!sentinel) return;
+
+    sentinel.classList.toggle('active', active);
+
+    if (feedLoader) {
+        feedLoader.classList.toggle('is-visible', active);
+        feedLoader.setAttribute('aria-hidden', active ? 'false' : 'true');
+    }
+}
+
+function loadingTime(ms) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
+}
+
+
 function resetFeed() {
-    currentPage = 0;
-    totalPages = Infinity;
+    nextOffset = 0;
+    totalItems = Infinity;
+    isFirstBatch = true;
+    feed.innerHTML = '';
+    videoCache = new Map();
+    setLoadingState(false);
+    if (sentinel) {
+        sentinel.classList.remove('hidden');
+    }
+    if (observer && sentinel) {
+        observer.observe(sentinel);
+    }
     feed.innerHTML = '';
     videoCache = new Map();
 }
@@ -179,8 +217,7 @@ function handleSeekCommit(event) {
     if (!videoPlayer) return;
     const target = event?.target ?? videoSeekBar;
     if (!target) return;
-    const newTime = Number(target.value || 0);
-    videoPlayer.currentTime = newTime;
+    videoPlayer.currentTime = Number(target.value || 0);
     isSeeking = false;
     updateTimelineDisplay();
 }
@@ -287,8 +324,7 @@ function skipPlayback(offsetSeconds) {
         return;
     }
 
-    const target = Math.min(Math.max((videoPlayer.currentTime || 0) + offsetSeconds, 0), videoPlayer.duration);
-    videoPlayer.currentTime = target;
+    videoPlayer.currentTime = Math.min(Math.max((videoPlayer.currentTime || 0) + offsetSeconds, 0), videoPlayer.duration);
     updateTimelineDisplay();
 }
 
@@ -460,17 +496,31 @@ function handleEpisodeListClick(event) {
 }
 
 async function fetchCatalogPage() {
-    if (isLoading || currentPage >= totalPages) return;
+    if (isLoading || nextOffset >= totalItems) return;
 
     const profileData = ensureProfileSelected();
     if (!profileData) return;
 
+    // Capture the category, offset, and request ID at the time this request starts
+    const requestCategory = activeSortBy;
+    const expectedOffset = nextOffset;
+    const requestId = currentRequestId;
+    
+    // Additional validation: if offset doesn't make sense, prevent the request
+    if (nextOffset > totalItems && totalItems !== Infinity) {
+        return;
+    }
+    
     isLoading = true;
     sentinel?.classList.remove('hidden');
+    setLoadingState(true);
 
+    const limit = isFirstBatch ? initialLoadSize : standardLoadSize;
+    const safeLimit = limit > 0 ? limit : initialLoadSize;
+    
     const params = new URLSearchParams({
-        page: String(currentPage + 1),
-        limit: String(pageSize),
+        offset: String(nextOffset),
+        limit: String(safeLimit),
         profileId: profileData.selectedProfileId,
     });
 
@@ -478,51 +528,255 @@ async function fetchCatalogPage() {
         params.set('search', activeSearchTerm);
     }
 
+    if (activeSortBy) {
+        params.set('sortBy', activeSortBy);
+    }
+
+    // Add category identifier to track request origin
+    params.set('requestCategory', requestCategory);
+
     try {
         const response = await fetch(`/catalog/data?${params.toString()}`);
+        
+        // Check if this request is still valid BEFORE processing response
+        if (requestId !== currentRequestId) {
+            isLoading = false;
+            setLoadingState(false);
+            return;
+        }
+        
+        if (requestCategory !== activeSortBy) {
+            isLoading = false;
+            setLoadingState(false);
+            return;
+        }
+        
         if (!response.ok) {
             throw new Error('Failed to load catalog page');
         }
 
         const data = await response.json();
-        updateLikedIds(data.likedContent);
-        appendVideos(data.catalog || []);
-
-        currentPage = data.page || currentPage + 1;
-        totalPages = data.totalPages || totalPages;
-
-        if (currentPage >= totalPages) {
-            sentinel?.classList.add('hidden');
+        
+        // CRITICAL: Validate BEFORE processing any content to prevent wrong videos from being displayed
+        if (requestId !== currentRequestId) {
+            isLoading = false;
+            setLoadingState(false);
+            return;
         }
+        
+        if (data.requestCategory && data.requestCategory !== activeSortBy) {
+            isLoading = false;
+            setLoadingState(false);
+            return;
+        }
+        
+        if (requestCategory !== activeSortBy) {
+            isLoading = false;
+            setLoadingState(false);
+            return;
+        }
+        
+        updateLikedIds(data.likedContent);
+        const waitTime = Math.max(0, MINIMUM_LOADER_DURATION_MS);
+        if (!isFirstBatch && waitTime > 0) {
+            await loadingTime(waitTime);
+        }
+        
+        // CRITICAL: Final validation right before adding content to prevent wrong videos
+        if (requestId !== currentRequestId || requestCategory !== activeSortBy) {
+            isLoading = false;
+            setLoadingState(false);
+            return;
+        }
+        
+        const catalogItems = Array.isArray(data.catalog) ? data.catalog : [];
+        appendVideos(catalogItems);
+
+        nextOffset += catalogItems.length;
+        const totalFromResponse = Number(data.total);
+        totalItems = Number.isFinite(totalFromResponse) ? totalFromResponse : totalItems;
+        isFirstBatch = false;
+        isLoading = false;
+
     } catch (error) {
         console.error(error);
-    } finally {
         isLoading = false;
+    } finally {
+        setLoadingState(false);
+        if (nextOffset >= totalItems) {
+            sentinel?.classList.add('hidden');
+        } else {
+            ensureContentFill();
+        }
     }
 }
 
 function initializeObserver() {
-    if (!('IntersectionObserver' in window) || !sentinel) {
+    
+    try {
+        window.addEventListener('scroll', handleScrollFallback, { passive: true });
+    } catch (error) {
         window.addEventListener('scroll', handleScrollFallback);
+    }
+    window.addEventListener('resize', ensureContentFill);
+
+    if (!('IntersectionObserver' in window) || !sentinel) {
+        ensureContentFill();
         return;
     }
 
+    if (observer) {
+        observer.disconnect();
+    }
+
+    // This is lazy loading to load videos when we are at the bottom of the page
     observer = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
             if (entry.isIntersecting) {
                 fetchCatalogPage();
             }
         });
+    }, {
+        root: null,
+        rootMargin: '200px 0px',
     });
 
     observer.observe(sentinel);
+    ensureContentFill();
+
 }
 
 function handleScrollFallback() {
+    if (isLoading || nextOffset >= totalItems) {
+        return;
+    }
     if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 300) {
         fetchCatalogPage();
     }
 }
+
+function ensureContentFill() {
+    if (isLoading || nextOffset >= totalItems) {
+        return;
+    }
+    const doc = document.documentElement;
+    const body = document.body;
+    const scrollHeight = Math.max(doc?.scrollHeight || 0, body?.scrollHeight || 0);
+    const clientHeight = window.innerHeight || doc?.clientHeight || 0;
+
+    if (scrollHeight - clientHeight < 200) {
+        fetchCatalogPage();
+    }
+}
+
+function resetFeedForSort() {
+    nextOffset = 0;
+    totalItems = Infinity;
+    isFirstBatch = true;
+    feed.innerHTML = '';
+    videoCache = new Map();
+    setLoadingState(false);
+    if (sentinel) {
+        sentinel.classList.remove('hidden');
+    }
+    if (observer && sentinel) {
+        observer.observe(sentinel);
+    }
+}
+
+async function setSortBy(sortBy) {
+    if (activeSortBy !== sortBy) {
+        activeSortBy = sortBy;
+        
+        // Update page header based on category
+        const pageHeader = document.getElementById('pageHeader');
+        if (pageHeader) {
+            if (sortBy === 'home') {
+                pageHeader.textContent = 'Continue Watching';
+            } else if (sortBy === 'popular') {
+                pageHeader.textContent = 'Most Popular';
+            } else if (sortBy.startsWith('genre:')) {
+                const genre = sortBy.replace('genre:', '');
+                pageHeader.textContent = genre;
+            }
+        }
+        
+        // Reset pagination state when switching categories
+        nextOffset = 0;
+        totalItems = Infinity;
+        isFirstBatch = true;
+        currentRequestId++; // Invalidate any pending requests
+        
+        try {
+            // Fetch new content while keeping current content visible (no stutter)
+            const profileData = ensureProfileSelected();
+            if (!profileData) return;
+
+            isLoading = true;
+            setLoadingState(true);
+            
+            const params = new URLSearchParams({
+                offset: '0',
+                limit: String(standardLoadSize || 5),
+                profileId: profileData.selectedProfileId,
+            });
+
+            if (activeSearchTerm) {
+                params.set('search', activeSearchTerm);
+            }
+
+            if (activeSortBy) {
+                params.set('sortBy', activeSortBy);
+            }
+
+            // Add category identifier to track request origin
+            params.set('requestCategory', activeSortBy);
+
+            const response = await fetch(`/catalog/data?${params.toString()}`);
+            if (response.ok) {
+                const data = await response.json();
+                
+                // Check if response matches current category (drop stale responses)
+                if (data.requestCategory && data.requestCategory !== activeSortBy) {
+                    return;
+                }
+                
+                // Atomically replace content to prevent stutter
+                feed.innerHTML = '';
+                updateLikedIds(data.likedContent);
+                appendVideos(data.catalog || []);
+
+                // Reset pagination state for new sort
+                const itemsLoaded = (data.catalog || []).length;
+                nextOffset = itemsLoaded;
+                const totalFromResponse = Number(data.total);
+                totalItems = Number.isFinite(totalFromResponse) ? totalFromResponse : Infinity;
+                isFirstBatch = false;
+                
+                // Disable infinite scroll if we've loaded all available items
+                if (nextOffset >= totalItems) {
+                    sentinel?.classList.add('hidden');
+                    if (observer && sentinel) {
+                        observer.unobserve(sentinel);
+                    }
+                } else {
+                    sentinel?.classList.remove('hidden');
+                }
+            } else {
+                throw new Error('Failed to load catalog with new sort');
+            }
+            
+        } catch (error) {
+            console.error('Error in setSortBy:', error);
+        } finally {
+            isLoading = false;
+            setLoadingState(false);
+        }
+    }
+}
+
+// Make setSortBy available globally for genre title clicks
+window.setSortBy = setSortBy;
 
 function toggleSearchInput() {
     if (!searchInput) return;
@@ -539,6 +793,17 @@ function handleSearchInput(event) {
     }
 
     activeSearchTerm = newTerm;
+    
+    // Reset sort to title when searching
+    if (activeSortBy !== 'home') {
+        activeSortBy = 'home';
+        // Update navigation styling
+        const homeLink = document.getElementById('homeLink');
+        const mostPopularLink = document.getElementById('mostPopularLink');
+        homeLink?.classList.add('active');
+        mostPopularLink?.classList.remove('active');
+    }
+    
     resetFeed();
     fetchCatalogPage();
 }
@@ -849,6 +1114,59 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchCatalogPage();
 
     feed.addEventListener('click', handleFeedClick);
+
+    // Navigation links
+    const homeLink = document.getElementById('homeLink');
+    const mostPopularLink = document.getElementById('mostPopularLink');
+    
+    homeLink?.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Only process if not already active
+        if (!homeLink.classList.contains('active')) {
+            setSortBy('home');
+            homeLink.classList.add('active');
+            mostPopularLink?.classList.remove('active');
+            // Clear active state from all genre links
+            document.querySelectorAll('[data-genre]').forEach(link => {
+                link.classList.remove('active');
+            });
+        }
+    });
+    
+    mostPopularLink?.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Only process if not already active
+        if (!mostPopularLink.classList.contains('active')) {
+            setSortBy('popular');
+            mostPopularLink.classList.add('active');
+            homeLink?.classList.remove('active');
+            // Clear active state from all genre links
+            document.querySelectorAll('[data-genre]').forEach(link => {
+                link.classList.remove('active');
+            });
+        }
+    });
+
+    // Genre navigation links
+    document.querySelectorAll('[data-genre]').forEach(genreLink => {
+        genreLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            const genre = e.target.getAttribute('data-genre');
+            // Only process if not already active
+            if (!genreLink.classList.contains('active')) {
+                setSortBy(`genre:${genre}`);
+                genreLink.classList.add('active');
+                homeLink?.classList.remove('active');
+                mostPopularLink?.classList.remove('active');
+                // Clear active state from other genre links
+                document.querySelectorAll('[data-genre]').forEach(link => {
+                    if (link !== genreLink) {
+                        link.classList.remove('active');
+                    }
+                });
+            }
+        });
+    });
 
     searchIcon?.addEventListener('click', toggleSearchInput);
     searchInput?.addEventListener('input', handleSearchInput);
