@@ -23,6 +23,7 @@ const videoSchema = new mongoose.Schema({
     genres: { type: [String], default: [] },
     poster: { type: String, default: '' },
     likes: { type: Number, default: 0 },
+    rating: { type: Number, default: 0.0, min: 0.0, max: 10.0 },
     videoPath: { type: String, required: true },
     type: {
         type: String,

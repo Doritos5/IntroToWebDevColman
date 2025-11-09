@@ -95,12 +95,18 @@ function createCardHTML(item) {
             <div class="small text-white-50 mb-2">${item.year ?? ''}</div>
             ${descriptionSnippet}
             <div class="mb-3">${badges}</div>
-            <div class="mt-auto d-flex justify-content-between align-items-center">
-              <span class="small">
-                <i class="bi bi-heart-fill text-danger me-1"></i>
-                <span data-likes-id="${item.id}">${item.likes ?? 0}</span>
-              </span>
-              <button class="btn btn-sm ${buttonClass}" data-item-id="${item.id}" data-like-button>${buttonText}</button>
+            <div class="mt-auto">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small">
+                  <i class="bi bi-heart-fill text-danger me-1"></i>
+                  <span data-likes-id="${item.id}">${item.likes ?? 0}</span>
+                </span>
+                <span class="small text-warning">
+                  <i class="bi bi-star-fill me-1"></i>
+                  ${item.rating ? item.rating.toFixed(1) : '0.0'}
+                </span>
+              </div>
+              <button class="btn btn-sm ${buttonClass} w-100" data-item-id="${item.id}" data-like-button>${buttonText}</button>
             </div>
           </div>
         </div>
