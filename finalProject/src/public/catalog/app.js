@@ -1382,7 +1382,14 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeObserver();
     fetchCatalogPage();
 
+    // Add click handler to feed for Continue Watching section
     feed.addEventListener('click', handleFeedClick);
+    
+    // Add click handler to main container for Most Popular and Genre sections
+    const mainContainer = document.querySelector('main');
+    if (mainContainer) {
+        mainContainer.addEventListener('click', handleFeedClick);
+    }
 
     // Navigation links
     const homeLink = document.getElementById('homeLink');
