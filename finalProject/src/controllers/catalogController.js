@@ -5,7 +5,7 @@ const userModel = require('../models/userModel');
 const viewingSessionModel = require('../models/viewingSessionModel');
 
 const INITIAL_PAGE_SIZE = 10;
-const DEFAULT_PAGE_SIZE = 5;
+const DEFAULT_PAGE_SIZE = process.env.ITEMS_PER_PAGE || 50;
 
 function normalizePageSize(value, fallback = DEFAULT_PAGE_SIZE) {
     const numeric = Number(value);
@@ -165,7 +165,7 @@ async function getCatalogData(req, res) {
             });
             
             // Get genre sections for home page
-            genreSections = await catalogModel.getVideosByGenre(10);
+            genreSections = await catalogModel.getVideosByGenre(videosPerPage || DEFAULT_PAGE_SIZE);
         } else if (sortBy.startsWith('genre:')) {
             // Genre-specific catalog
             const genre = sortBy.replace('genre:', '');

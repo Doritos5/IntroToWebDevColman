@@ -470,41 +470,74 @@ async function getVideosByGenre(limit = 10) {
     try {
         // Get all unique genres from the videos collection
         const genres = await Video.distinct('genres', { genres: { $exists: true, $ne: [] } });
-        
+
         const genreSections = [];
-        
+
         for (const genre of genres) {
             // For each genre, get the newest videos (by year)
             // For series, get only the first episode and max 1 per series
             const videos = await Video.aggregate([
-                // Match videos that have this genre
+                // 1. Match videos that have this genre
                 { $match: { genres: genre } },
-                
-                // Sort by year (newest first), then by episodeNumber for series
-                { $sort: { year: -1, episodeNumber: 1 } },
-                
-                // Group series together to get only first episode per series
+
+                // 2. Sort so that $first picks earliest episode for series
+                { $sort: { year: 1, episodeNumber: 1 } },
+
+                // 3. Group by series (for series) or by self (for movies)
                 {
                     $group: {
                         _id: {
                             // Group by series ID for series, by video ID for movies
-                            seriesId: { $cond: [{ $eq: ['$type', 'series'] }, '$series', '$_id'] },
+                            seriesId: {
+                                $cond: [
+                                    { $eq: ['$type', 'series'] },
+                                    '$series',
+                                    '$_id'
+                                ]
+                            },
                             type: '$type'
                         },
                         firstEpisode: { $first: '$$ROOT' }
                     }
                 },
-                
-                // Replace root with the first episode document
+
+                // 4. Replace root with the first episode document
                 { $replaceRoot: { newRoot: '$firstEpisode' } },
-                
-                // Sort again by year (newest first)
+
+                // 5. Lookup the related series document
+                {
+                    $lookup: {
+                        from: 'series',
+                        localField: 'series',
+                        foreignField: '_id',
+                        as: 'seriesDoc'
+                    }
+                },
+
+                // 6. Unwind to convert [seriesDoc] → seriesDoc (null if no series)
+                { $unwind: { path: '$seriesDoc', preserveNullAndEmptyArrays: true } },
+
+                // 7. Add seriesTitle and seriesData fields
+                {
+                    $addFields: {
+                        seriesTitle: '$seriesDoc.title',
+                    }
+                },
+
+                // 8. Sort final list by year descending
                 { $sort: { year: -1 } },
-                
-                // Limit to specified number of items per genre
-                { $limit: limit }
+
+                // 9. Limit to desired number of results
+                { $limit: limit },
+
+                // 10. Remove internal seriesDoc
+                {
+                    $project: {
+                        seriesDoc: 0
+                    }
+                }
             ]);
-            
+
             if (videos.length > 0) {
                 genreSections.push({
                     genre,
@@ -512,7 +545,7 @@ async function getVideosByGenre(limit = 10) {
                 });
             }
         }
-        
+
         return genreSections;
     } catch (error) {
         console.error('Error getting videos by genre:', error);
@@ -557,7 +590,7 @@ async function getCatalogByGenre({ genre, page = 1, offset, limit = 10, search =
                     ...searchCondition
                 }
             },
-            
+
             // Group series to get only first episodes
             {
                 $group: {
@@ -568,10 +601,10 @@ async function getCatalogByGenre({ genre, page = 1, offset, limit = 10, search =
                     doc: { $first: '$$ROOT' }
                 }
             },
-            
+
             // Replace root with the document
             { $replaceRoot: { newRoot: '$doc' } },
-            
+
             // Sort by year (newest first), then by title
             { $sort: { year: -1, title: 1 } }
         ];
@@ -584,11 +617,11 @@ async function getCatalogByGenre({ genre, page = 1, offset, limit = 10, search =
             const skipAmount = (pageNumber - 1) * pageSize;
             pipeline.push({ $skip: skipAmount });
         }
-        
+
         pipeline.push({ $limit: pageSize });
 
         const videos = await Video.aggregate(pipeline);
-        
+
         // Get total count for pagination
         const countPipeline = [
             {
@@ -607,7 +640,7 @@ async function getCatalogByGenre({ genre, page = 1, offset, limit = 10, search =
             },
             { $count: 'total' }
         ];
-        
+
         const countResult = await Video.aggregate(countPipeline);
         const totalCount = countResult[0]?.total || 0;
 
