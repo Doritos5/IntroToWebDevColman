@@ -4,129 +4,82 @@
     <meta charset="UTF-8">
     <title>Analytics</title>
 
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <style>
-        /* ---- Base layout ---- */
-        body.analytics-glass {
+        body {
             margin: 0;
-            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #000;
             color: #fff;
-            overflow-x: hidden;
+            font-family: Arial, sans-serif;
         }
 
-        /* Translucent black background with blur */
-        body.analytics-glass::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.82);
-            z-index: -2;
-        }
-
-        body.analytics-glass::after {
-            content: "";
-            position: fixed;
-            inset: 0;
-            backdrop-filter: blur(8px) brightness(0.7);
-            z-index: -1;
-        }
-
-        /* ---- Page container ---- */
-        .analytics-page {
-            position: relative;
-            z-index: 1;
-            max-width: 1200px;
+        .analytics-container {
+            max-width: 1100px;
             margin: 0 auto;
-            padding: 96px 40px 40px;
+            padding: 80px 24px 40px;
         }
 
-        /* ---- Titles ---- */
-        .analytics-header {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
+        h1 {
+            color: #e50914;
+            font-size: 2.4rem;
+            margin: 0 0 8px;
+        }
+
+        .subtitle {
+            font-size: 0.95rem;
+            color: #bbbbbb;
             margin-bottom: 32px;
         }
 
-        .analytics-title {
-            color: #e50914;
-            font-size: 2.6rem;
-            font-weight: 800;
-            letter-spacing: 1px;
+        h2 {
+            font-size: 1.25rem;
+            margin: 32px 0 12px;
         }
 
-        .analytics-subtitle {
-            font-size: 0.95rem;
-            color: rgba(255, 255, 255, 0.7);
+        .chart-box {
+            background-color: #111;
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
+            margin-bottom: 32px;
         }
 
-        .chart-section-title {
-            margin: 32px 0 14px;
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #f5f5f5;
-        }
-
-        /* ---- Chart containers ---- */
-        .chart-wrapper {
-            background: rgba(20, 20, 20, 0.85);
-            border-radius: 16px;
-            padding: 18px 18px 10px;
-            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            backdrop-filter: blur(6px);
-            margin-bottom: 40px;
-        }
-
-        .chart-wrapper canvas {
+        .chart-box canvas {
             width: 100% !important;
             height: 320px !important;
         }
 
-        .chart-note {
+        .note {
             font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.5);
+            color: #888;
             margin-top: 4px;
-        }
-
-        @media (max-width: 768px) {
-            .analytics-page {
-                padding: 80px 16px 24px;
-            }
-
-            .analytics-title {
-                font-size: 2rem;
-            }
         }
     </style>
 </head>
 
-<body class="navbar-page analytics-glass">
-<main class="analytics-page">
-    <section class="analytics-header">
-        <h1 class="analytics-title">Analytics</h1>
-        <div class="analytics-subtitle">
-            Viewing activity and content performance overview.
-        </div>
-    </section>
+<body class="navbar-page">
+<main class="analytics-container">
+    <h1>Analytics</h1>
+    <div class="subtitle">
+        Viewing activity and content performance overview.
+    </div>
 
     <section>
-        <h3 class="chart-section-title">Daily Views per Profile (Last 7 Days)</h3>
-        <div class="chart-wrapper">
+        <h2>Daily Views per Profile (Last 7 Days)</h2>
+        <div class="chart-box">
             <canvas id="dailyViewsChart"></canvas>
-            <div class="chart-note">
-                Each color represents a profile. Empty days are shown as 0 views.
+            <div class="note">
+                Each color represents a profile. Days without data are shown as 0 views.
             </div>
         </div>
     </section>
 
     <section>
-        <h3 class="chart-section-title">Content popularity by genre (last 90 days)</h3>
-        <div class="chart-wrapper">
+        <h2>Content Popularity by Genre (Last 90 Days)</h2>
+        <div class="chart-box">
             <canvas id="genreChart"></canvas>
-            <div class="chart-note">
+            <div class="note">
                 Based on completed viewing sessions by genre.
             </div>
         </div>
@@ -139,87 +92,76 @@
     const genreLabels        = <%- JSON.stringify(genreLabels        || []) %>;
     const genreData          = <%- JSON.stringify(genreData          || []) %>;
 
-    if (typeof Chart === 'undefined') {
-        console.error('Chart.js failed to load');
-    } else {
-        // ----- Daily views chart -----
-        const dailyCtx = document.getElementById('dailyViewsChart').getContext('2d');
+    const barColors = ['#e50914', '#46d369', '#3b82f6', '#facc15', '#a855f7', '#22c55e'];
 
-        const dailyDatasets = (dailyViewsDatasets || []).map((ds, index) => ({
-            label: ds.label,
-            data: ds.data,
-            backgroundColor: ds.backgroundColor,
-            borderColor: '#111',
-            borderWidth: 1,
-            barThickness: 26
-        }));
+    // Daily views chart
+    const dailyCtx = document.getElementById('dailyViewsChart');
 
-        new Chart(dailyCtx, {
-            type: 'bar',
-            data: {
-                labels: dailyViewsLabels,
-                datasets: dailyDatasets
+    const preparedDatasets = (dailyViewsDatasets || []).map((ds, index) => ({
+        label: ds.label,
+        data: ds.data,
+        backgroundColor: barColors[index % barColors.length]
+    }));
+
+    new Chart(dailyCtx, {
+        type: 'bar',
+        data: {
+            labels: dailyViewsLabels,
+            datasets: preparedDatasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#ffffff',
+                        font: { size: 11 }
+                    }
+                }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: '#fff',
-                            font: { size: 11 }
-                        }
-                    },
-                    title: { display: false }
+            scales: {
+                x: {
+                    ticks: { color: '#ffffff' },
+                    grid: { color: 'rgba(255,255,255,0.08)' }
                 },
-                scales: {
-                    x: {
-                        ticks: { color: '#fff', maxRotation: 0, autoSkip: true },
-                        grid: { color: 'rgba(255,255,255,0.08)' }
-                    },
-                    y: {
-                        ticks: { color: '#fff', precision: 0 },
-                        grid: { color: 'rgba(255,255,255,0.12)' }
+                y: {
+                    ticks: { color: '#ffffff', precision: 0 },
+                    grid: { color: 'rgba(255,255,255,0.15)' }
+                }
+            }
+        }
+    });
+
+    // Genre popularity chart
+    const genreCtx = document.getElementById('genreChart');
+
+    const genreColors = genreLabels.map((_, i) => barColors[i % barColors.length]);
+
+    new Chart(genreCtx, {
+        type: 'doughnut',
+        data: {
+            labels: genreLabels,
+            datasets: [{
+                data: genreData,
+                backgroundColor: genreColors
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '55%',
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        color: '#ffffff',
+                        font: { size: 11 }
                     }
                 }
             }
-        });
-
-        // ----- Genre popularity chart -----
-        const genreCtx = document.getElementById('genreChart').getContext('2d');
-
-        new Chart(genreCtx, {
-            type: 'doughnut',
-            data: {
-                labels: genreLabels,
-                datasets: [{
-                    data: genreData,
-                    backgroundColor: (genreLabels || []).map((_, i) =>
-                        `hsl(${(i * 40) % 360}, 75%, 55%)`
-                    ),
-                    borderColor: '#000',
-                    borderWidth: 2,
-                    hoverOffset: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '55%',
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            color: '#fff',
-                            font: { size: 11 },
-                            usePointStyle: true
-                        }
-                    },
-                    title: { display: false }
-                }
-            }
-        });
-    }
+        }
+    });
 </script>
 </body>
 </html>

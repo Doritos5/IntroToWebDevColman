@@ -11,15 +11,15 @@ router.get('/', async (req, res, next) => {
 
     const today = new Date();
 
-    // Daily views per profile (last 7 days)
-    const from7 = new Date(today);
-    from7.setDate(from7.getDate() - 6);
-    from7.setHours(0, 0, 0, 0);
+    // ----- Daily views per profile (last 7 days, including today) -----
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
 
     const dailyAgg = await sessions.aggregate([
       {
         $match: {
-          createdAt: { $gte: from7 }
+          createdAt: { $gte: sevenDaysAgo }
         }
       },
       {
@@ -50,41 +50,33 @@ router.get('/', async (req, res, next) => {
       { $sort: { _id: 1 } }
     ]).toArray();
 
-    const dailyViewsLabels = dailyAgg.map(d => d._id);
+    const dailyViewsLabels = dailyAgg.map(row => row._id);
 
     const profileIds = [
       ...new Set(
-        dailyAgg.flatMap(d => d.profiles.map(p => p.profileId))
+        dailyAgg.flatMap(row => row.profiles.map(p => p.profileId))
       )
     ];
 
-    const dailyViewsDatasets = profileIds.map((pid, index) => {
-      const shortLabel =
-        typeof pid === 'string'
-          ? `Profile ${pid.slice(-4)}`
-          : `Profile ${index + 1}`;
+    const dailyViewsDatasets = profileIds.map((profileId, index) => ({
+      label: `Profile ${index + 1}`,
+      data: dailyViewsLabels.map(date => {
+        const day = dailyAgg.find(row => row._id === date);
+        if (!day) return 0;
+        const profile = day.profiles.find(p => p.profileId === profileId);
+        return profile ? profile.views : 0;
+      })
+    }));
 
-      return {
-        label: shortLabel,
-        data: dailyViewsLabels.map(date => {
-          const day = dailyAgg.find(d => d._id === date);
-          if (!day) return 0;
-          const entry = day.profiles.find(p => p.profileId === pid);
-          return entry ? entry.views : 0;
-        }),
-        backgroundColor: `hsl(${(index * 67) % 360}, 70%, 50%)`
-      };
-    });
-
-    // Content popularity by genre (last 90 days)
-    const from90 = new Date(today);
-    from90.setDate(from90.getDate() - 89);
-    from90.setHours(0, 0, 0, 0);
+    // ----- Content popularity by genre (last 90 days) -----
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 89);
+    ninetyDaysAgo.setHours(0, 0, 0, 0);
 
     const genreAgg = await sessions.aggregate([
       {
         $match: {
-          createdAt: { $gte: from90 }
+          createdAt: { $gte: ninetyDaysAgo }
         }
       },
       {

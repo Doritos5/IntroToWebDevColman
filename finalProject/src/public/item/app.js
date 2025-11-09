@@ -4,6 +4,7 @@ const likeCountElement = document.getElementById('likeCount');
 const metaLikeCountElement = document.getElementById('metaLikeCount');
 const bodyElement = document.body;
 const videoElement = document.getElementById('detailVideoPlayer');
+const restartButton = document.getElementById('restartButton');
 const videoShell = document.getElementById('videoShell');
 const videoPanelElement = document.querySelector('.video-panel');
 const overlayPlayButton = document.getElementById('overlayPlayButton');
@@ -289,6 +290,26 @@ function toggleFullscreen() {
         document.exitFullscreen().catch(() => {});
     }
 }
+
+function restartPlayback() {
+    if (!videoElement) return;
+
+    try {
+        videoElement.currentTime = 0;
+    } catch (error) {
+        console.warn('Unable to restart playback', error);
+        return;
+    }
+
+    updateTimelineDisplay();
+
+    // Auto-play from the beginning
+    videoElement.play().catch(() => {
+        // If autoplay is blocked, keep it at 0 with correct UI state
+        updatePlayState(false);
+    });
+}
+
 
 function updateFullscreenIcon() {
     const icon = fullscreenButton?.querySelector('i');
@@ -612,6 +633,7 @@ function setupVideoEvents() {
     playPauseButton?.addEventListener('click', togglePlay);
     rewindButton?.addEventListener('click', () => skipPlayback(-10));
     forwardButton?.addEventListener('click', () => skipPlayback(10));
+    restartButton?.addEventListener('click', restartPlayback);
     videoSeekBar?.addEventListener('input', handleSeekInput);
     videoSeekBar?.addEventListener('change', handleSeekCommit);
     videoSeekBar?.addEventListener('mouseup', handleSeekCommit);
