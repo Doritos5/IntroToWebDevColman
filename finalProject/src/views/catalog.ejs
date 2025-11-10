@@ -28,7 +28,6 @@
         <div class="navbar-collapse" id="navbarNav">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item"><a class="nav-link active" href="#" id="homeLink">Home</a></li>
-                <li class="nav-item"><a class="nav-link" href="#" id="mostPopularLink">Most Popular</a></li>
                 <% if (typeof availableGenres !== 'undefined' && availableGenres && availableGenres.length > 0) { %>
                     <% availableGenres.forEach(genre => { %>
                         <li class="nav-item">
@@ -42,12 +41,16 @@
 
             <div class="d-flex align-items-center">
                 <span class="icon-btn bi bi-search"></span>
-                <label for="searchInput" class="visually-hidden">Search</label>
-                <input id="searchInput"
-                       type="text"
-                       class="form-control bg-dark text-white border-0 ms-2 search-box"
-                       placeholder="Search..."
-                />
+                <div class="search-container">
+                    <label for="searchInput" class="visually-hidden">Search</label>
+                    <input id="searchInput"
+                           type="text"
+                           class="form-control bg-dark text-white border-0 search-box"
+                           placeholder="Search..."
+                           disabled
+                    />
+                    <span class="search-close-btn bi bi-x" id="searchCloseBtn"></span>
+                </div>
 
                 <% if (locals.profileName) { %>
                     <div class="greeting-banner nav-greeting ms-3">
@@ -84,22 +87,19 @@
     <script>
         // Navigation handling for categories and genres
         document.addEventListener('click', function(e) {
-            if (e.target && e.target.id === 'mostPopularLink') {
-                document.body.classList.add('most-popular');
-                // Clear genre sections when switching to Most Popular
-                const feedContainer = document.querySelector('main .container-xxl') || document.querySelector('main');
-                if (feedContainer) {
-                    feedContainer.querySelectorAll('.genre-section').forEach(section => section.remove());
-                }
-            } else if (e.target && e.target.id === 'homeLink') {
-                document.body.classList.remove('most-popular');
+            if (e.target && e.target.id === 'homeLink') {
+                // Handle home navigation
             } else if (e.target && e.target.hasAttribute('data-genre')) {
                 // Handle genre navigation
-                document.body.classList.add('most-popular'); // Hide header for genre categories
-                // Clear genre sections when switching to a specific genre
+                // Clear genre sections and Most Popular section when switching to a specific genre
                 const feedContainer = document.querySelector('main .container-xxl') || document.querySelector('main');
                 if (feedContainer) {
                     feedContainer.querySelectorAll('.genre-section').forEach(section => section.remove());
+                    // Clear Most Popular section
+                    const mostPopularSection = document.getElementById('most-popular-section');
+                    const mostPopularHeader = document.getElementById('most-popular-header');
+                    if (mostPopularSection) mostPopularSection.remove();
+                    if (mostPopularHeader) mostPopularHeader.remove();
                 }
             }
         });
@@ -181,6 +181,54 @@
                             }
                         });
                     };
+
+                    // Define appendMostPopularSection function (same pattern as appendGenreSections)
+                    if (typeof window.appendMostPopularSection === 'undefined') {
+                        window.appendMostPopularSection = function(mostPopular) {
+                            const feedContainer = document.querySelector('main .container-xxl') || document.querySelector('main');
+                            if (!feedContainer || !mostPopular || !Array.isArray(mostPopular) || mostPopular.length === 0) return;
+
+                            // Remove existing Most Popular section
+                            const existingSection = document.getElementById('most-popular-section');
+                            const existingHeader = document.getElementById('most-popular-header');
+                            if (existingSection) existingSection.remove();
+                            if (existingHeader) existingHeader.remove();
+
+                            // Create section header
+                            const sectionHeader = document.createElement('div');
+                            sectionHeader.id = 'most-popular-header';
+                            sectionHeader.className = 'mb-3 mx-4';
+                            sectionHeader.innerHTML = '<h3 class="h5 text-white-50 mb-0">Most Popular</h3>';
+
+                            // Create section container
+                            const sectionContainer = document.createElement('div');
+                            sectionContainer.id = 'most-popular-section';
+                            sectionContainer.className = 'row row-cols-1 row-cols-md-3 mx-4 my-6 text-center';
+
+                            const fragment = document.createDocumentFragment();
+                            mostPopular.forEach(video => {
+                                if (window.createCardHTML) {
+                                    if (window.videoCache) window.videoCache.set(video.id, video);
+                                    if (window.episodesMap) window.episodesMap.set(video.id, video);
+                                    
+                                    const wrapper = document.createElement('div');
+                                    wrapper.innerHTML = window.createCardHTML(video);
+                                    fragment.appendChild(wrapper.firstElementChild);
+                                }
+                            });
+                            sectionContainer.appendChild(fragment);
+
+                            // Insert after the feed (Continue Watching section) 
+                            const feed = document.getElementById('feed');
+                            if (feed && feed.nextSibling) {
+                                feedContainer.insertBefore(sectionHeader, feed.nextSibling);
+                                feedContainer.insertBefore(sectionContainer, sectionHeader.nextSibling);
+                            } else {
+                                feedContainer.appendChild(sectionHeader);
+                                feedContainer.appendChild(sectionContainer);
+                            }
+                        };
+                    }
                     
                     // Intercept AJAX calls for genre sections
                     const originalFetch = window.fetch;
@@ -190,9 +238,59 @@
                                 const clonedResponse = response.clone();
                                 clonedResponse.json().then(data => {
                                     if (data.genreSections && Array.isArray(data.genreSections)) {
-                                        setTimeout(() => window.appendGenreSections(data.genreSections), 100);
+                                        // Check if we're searching
+                                        const urlParams = new URLSearchParams(response.url.split('?')[1]);
+                                        const searchTerm = urlParams.get('search');
+                                        
+                                        let sectionsToShow = data.genreSections;
+                                        
+                                        if (searchTerm && searchTerm.trim()) {
+                                            // Filter genre sections to only show videos matching search
+                                            const searchLower = searchTerm.toLowerCase().trim();
+                                            sectionsToShow = data.genreSections.map(section => ({
+                                                ...section,
+                                                videos: section.videos.filter(video => 
+                                                    video.title && video.title.toLowerCase().includes(searchLower)
+                                                )
+                                            })).filter(section => section.videos.length > 0); // Only keep sections with matching videos
+                                        }
+                                        
+                                        // Store genre sections results count for no-results check
+                                        const totalGenreVideos = sectionsToShow.reduce((total, section) => total + section.videos.length, 0);
+                                        window.genreSectionsResultsCount = totalGenreVideos;
+                                        
+                                        setTimeout(() => {
+                                            window.appendGenreSections(sectionsToShow);
+                                            // Check for no results after genre sections are loaded
+                                            if (searchTerm && searchTerm.trim() && window.checkAndShowNoResults) {
+                                                window.checkAndShowNoResults(searchTerm);
+                                            }
+                                        }, 100);
                                     }
-                                }).catch(error => console.error('Genre sections fetch failed:', error));
+                                    
+                                    // Handle Most Popular section
+                                    if (data.mostPopular && Array.isArray(data.mostPopular)) {
+                                        // Check if we're searching
+                                        const urlParams = new URLSearchParams(response.url.split('?')[1]);
+                                        const searchTerm = urlParams.get('search');
+                                        
+                                        let mostPopularToShow = data.mostPopular;
+                                        
+                                        if (searchTerm && searchTerm.trim()) {
+                                            // Filter Most Popular to only show videos matching search
+                                            const searchLower = searchTerm.toLowerCase().trim();
+                                            mostPopularToShow = data.mostPopular.filter(video => 
+                                                video.title && video.title.toLowerCase().includes(searchLower)
+                                            );
+                                        }
+                                        
+                                        setTimeout(() => {
+                                            if (window.appendMostPopularSection && mostPopularToShow.length > 0) {
+                                                window.appendMostPopularSection(mostPopularToShow);
+                                            }
+                                        }, 50); // Show Most Popular before genre sections
+                                    }
+                                }).catch(error => console.error('Sections fetch failed:', error));
                             }
                             return response;
                         });
@@ -210,11 +308,16 @@
                                 fetch(`/catalog/data?offset=0&limit=10&profileId=${encodeURIComponent(profileId)}&sortBy=home&requestCategory=home`)
                                     .then(response => response.json())
                                     .then(data => {
+                                        // Handle Most Popular section
+                                        if (data.mostPopular && Array.isArray(data.mostPopular) && data.mostPopular.length > 0 && window.appendMostPopularSection) {
+                                            window.appendMostPopularSection(data.mostPopular);
+                                        }
+                                        // Handle genre sections
                                         if (data.genreSections && Array.isArray(data.genreSections)) {
                                             window.appendGenreSections(data.genreSections);
                                         }
                                     })
-                                    .catch(error => console.error('Genre sections loading failed:', error));
+                                    .catch(error => console.error('Sections loading failed:', error));
                             }
                         }, 1500);
                     }
