@@ -22,57 +22,68 @@
 <body class="navbar-page">
 
 <nav class="navbar navbar-expand-lg fixed-top">
-    <div class="container-fluid">
-    <a class="navbar-brand brand" href="/catalog">Streamix</a>
+  <div class="container-fluid">
 
-        <div class="navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                <li class="nav-item"><a class="nav-link active" href="#" id="homeLink">Home</a></li>
-                <% if (typeof availableGenres !== 'undefined' && availableGenres && availableGenres.length > 0) { %>
-                    <% availableGenres.forEach(genre => { %>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#" id="genre<%= genre.replace(/[^a-zA-Z0-9]/g, '') %>Link" data-genre="<%= genre %>">
-                                <%= genre %>
-                            </a>
-                        </li>
-                    <% }); %>
-                <% } %>
-            </ul>
+    <!-- Left: brand (never shrinks) -->
+    <a class="navbar-brand brand flex-shrink-0 me-3" href="/catalog">Streamix</a>
 
-            <div class="d-flex align-items-center">
-                <span class="icon-btn bi bi-search"></span>
-                <div class="search-container">
-                    <label for="searchInput" class="visually-hidden">Search</label>
-                    <input id="searchInput"
-                           type="text"
-                           class="form-control bg-dark text-white border-0 search-box"
-                           placeholder="Search..."
-                           disabled
-                    />
-                    <span class="search-close-btn bi bi-x" id="searchCloseBtn"></span>
-                </div>
+    <!-- Middle: scrollable genres taking remaining space -->
+    <div class="genres-viewport flex-grow-1 overflow-hidden">
+      <ul class="navbar-nav flex-row genres-strip mb-0">
+        <li class="nav-item">
+          <a class="nav-link active" href="#" id="homeLink">Home</a>
+        </li>
 
-                <% if (locals.profileName) { %>
-                    <div class="greeting-banner nav-greeting ms-3">
-                        Hi, <%= profileName %>
-                    </div>
-                <% } %>
-
-                <div class="dropdown ms-3">
-                    <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="avatarMenu" data-bs-toggle="dropdown">
-                        <img src="/images/netflix_profile.jpg" alt="User" class="rounded user-avatar">
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end text-small shadow">
-                         <li><a class="dropdown-item" href="#">Profile</a></li>
-                         <li><a class="dropdown-item" href="/profiles_page">Change profile</a></li>
-                         <li><a class="dropdown-item" href="/settings">Settings</a></li>
-                          <li><hr class="dropdown-divider"></li>
-                          <li><a class="dropdown-item" href="#" id="signOutLink">Logout</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+        <% if (typeof availableGenres !== 'undefined' && availableGenres && availableGenres.length > 0) { %>
+          <% availableGenres.forEach(genre => { %>
+            <li class="nav-item">
+              <a
+                class="nav-link"
+                href="#"
+                id="genre<%= genre.replace(/[^a-zA-Z0-9]/g, '') %>Link"
+                data-genre="<%= genre %>"
+              ><%= genre %></a>
+            </li>
+          <% }); %>
+        <% } %>
+      </ul>
     </div>
+
+    <!-- Right: utilities (never shrink) -->
+    <div class="navbar-utils d-flex align-items-center ms-3 gap-2 flex-shrink-0">
+      <span class="icon-btn bi bi-search"></span>
+
+      <div class="search-container">
+        <label for="searchInput" class="visually-hidden">Search</label>
+        <input id="searchInput"
+               type="text"
+               class="form-control bg-dark text-white border-0 search-box"
+               placeholder="Search..."
+               disabled />
+        <span class="search-close-btn bi bi-x" id="searchCloseBtn"></span>
+      </div>
+
+      <% if (locals.profileName) { %>
+        <div class="greeting-banner nav-greeting ms-2">
+          Hi, <%= profileName %>
+        </div>
+      <% } %>
+
+      <div class="dropdown ms-2">
+        <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle"
+           id="avatarMenu" data-bs-toggle="dropdown">
+          <img src="/images/netflix_profile.jpg" alt="User" class="rounded user-avatar">
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end text-small shadow">
+          <li><a class="dropdown-item" href="/profiles_page">Change profile</a></li>
+          <li><a class="dropdown-item" href="/settings">Settings</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="#" id="signOutLink">Logout</a></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
 </nav>
 
 <main class="container-xxl">
