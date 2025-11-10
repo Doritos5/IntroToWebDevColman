@@ -3,6 +3,7 @@ const r = dotenv.config();
 const path = require('path');
 const express = require('express');
 const session = require('express-session');
+const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo');
 
 if (!process.env.SESSION_SECRET) {
@@ -53,8 +54,24 @@ app.use('/', authRoutes);
 app.use('/catalog', catalogRoutes);
 app.use('/profiles', profileRoutes);
 app.use('/likes', likeRoutes);
-app.use('/analytics', analyticsRoutes);
+app.use('/settings/analytics', analyticsRoutes);
 
+app.get('/settings/manage-profiles', async (req, res, next) => {
+  try {
+    const db = mongoose.connection.db;
+    const profilesCollection = db.collection('profiles');
+    const allProfiles = await profilesCollection.find().toArray();
+
+    const profiles = allProfiles.map(p => ({
+      id: String(p._id),
+      displayName: p.displayName || p.name || `Profile ${p._id}`
+    }));
+
+    res.render('settings', { title: 'Manage Profiles', profiles });
+  } catch (err) {
+    next(err);
+  }
+});
 
 async function startServer() {
     try {

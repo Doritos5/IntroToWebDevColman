@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -19,154 +20,155 @@
     -->
     <script src="/catalog/app.js?v=<%= cacheBuster %>&t=<%= Date.now() %>" defer></script>
 </head>
+
 <body class="navbar-page">
 
-<nav class="navbar navbar-expand-lg fixed-top">
-    <div class="container-fluid">
-    <a class="navbar-brand brand" href="/catalog">Streamix</a>
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand brand" href="/catalog">Streamix</a>
 
-        <div class="navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                <li class="nav-item"><a class="nav-link active" href="#" id="homeLink">Home</a></li>
-                <% if (typeof availableGenres !== 'undefined' && availableGenres && availableGenres.length > 0) { %>
-                    <% availableGenres.forEach(genre => { %>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#" id="genre<%= genre.replace(/[^a-zA-Z0-9]/g, '') %>Link" data-genre="<%= genre %>">
-                                <%= genre %>
-                            </a>
-                        </li>
-                    <% }); %>
-                <% } %>
-            </ul>
+            <div class="navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link active" href="#" id="homeLink">Home</a></li>
+                    <% if (typeof availableGenres !=='undefined' && availableGenres && availableGenres.length> 0) { %>
+                        <% availableGenres.forEach(genre=> { %>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#" id="genre<%= genre.replace(/[^a-zA-Z0-9]/g, '') %>Link"
+                                    data-genre="<%= genre %>">
+                                    <%= genre %>
+                                </a>
+                            </li>
+                            <% }); %>
+                                <% } %>
+                </ul>
 
-            <div class="d-flex align-items-center">
-                <span class="icon-btn bi bi-search"></span>
-                <div class="search-container">
-                    <label for="searchInput" class="visually-hidden">Search</label>
-                    <input id="searchInput"
-                           type="text"
-                           class="form-control bg-dark text-white border-0 search-box"
-                           placeholder="Search..."
-                           disabled
-                    />
-                    <span class="search-close-btn bi bi-x" id="searchCloseBtn"></span>
-                </div>
-
-                <% if (locals.profileName) { %>
-                    <div class="greeting-banner nav-greeting ms-3">
-                        Hi, <%= profileName %>
+                <div class="d-flex align-items-center">
+                    <span class="icon-btn bi bi-search"></span>
+                    <div class="search-container">
+                        <label for="searchInput" class="visually-hidden">Search</label>
+                        <input id="searchInput" type="text" class="form-control bg-dark text-white border-0 search-box"
+                            placeholder="Search..." disabled />
+                        <span class="search-close-btn bi bi-x" id="searchCloseBtn"></span>
                     </div>
-                <% } %>
 
-                <div class="dropdown ms-3" data-bs-auto-close="outside">
-                    <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="avatarMenu" data-bs-toggle="dropdown">
-                        <img src="/images/netflix_profile.jpg" alt="User" class="rounded user-avatar">
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end text-small shadow">
-                        <li><a class="dropdown-item" href="/profiles_page">Profile</a></li>
-                        <li class="dropdown-submenu">
-                            <a class="dropdown-item" href="#" id="settingsToggle">Settings ▸</a>
-                            <ul class="dropdown-menu" id="settingsMenu">
-                                <li><a class="dropdown-item" href="/analytics">Analytics</a></li>
-                            </ul>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <form action="/logout" method="POST" style="margin:0;">
-                                <button type="submit" class="dropdown-item">
-                                    Sign out
-                                </button>
-                            </form>
-                        </li>
-                    </ul>
+                    <% if (locals.profileName) { %>
+                        <div class="greeting-banner nav-greeting ms-3">
+                            Hi, <%= profileName %>
+                        </div>
+                        <% } %>
+
+                            <div class="dropdown ms-3" data-bs-auto-close="outside">
+                                <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle"
+                                    id="avatarMenu" data-bs-toggle="dropdown">
+                                    <img src="/images/netflix_profile.jpg" alt="User" class="rounded user-avatar">
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end text-small shadow">
+                                    <li><a class="dropdown-item" href="/profiles_page">Profile</a></li>
+                                    <li class="dropdown-submenu">
+                                        <a class="dropdown-item" href="#" id="settingsToggle">Settings ▸</a>
+                                        <ul class="dropdown-menu" id="settingsMenu">
+                                            <li><a class="dropdown-item" href="/settings/manage-profiles">Manage
+                                                    Profiles</a></li>
+                                            <li><a class="dropdown-item" href="/settings/analytics">Analytics</a></li>
+                                        </ul>
+                                    </li>
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li>
+                                        <form action="/logout" method="POST" style="margin:0;">
+                                            <button type="submit" class="dropdown-item">Sign out</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
                 </div>
             </div>
         </div>
-    </div>
-</nav>
+    </nav>
 
-<main class="container-xxl">
-    <header class="mb-4">
-        <h2 class="h4 text-white-50 mb-0" id="pageHeader">Continue Watching</h2>
-    </header>
-    
-    <script>
-        // Navigation handling for categories and genres
-        document.addEventListener('click', function(e) {
-            if (e.target && e.target.id === 'homeLink') {
-                // Handle home navigation
-            } else if (e.target && e.target.hasAttribute('data-genre')) {
-                // Handle genre navigation
-                // Clear genre sections and Most Popular section when switching to a specific genre
-                const feedContainer = document.querySelector('main .container-xxl') || document.querySelector('main');
-                if (feedContainer) {
-                    feedContainer.querySelectorAll('.genre-section').forEach(section => section.remove());
-                    // Clear Most Popular section
-                    const mostPopularSection = document.getElementById('most-popular-section');
-                    const mostPopularHeader = document.getElementById('most-popular-header');
-                    if (mostPopularSection) mostPopularSection.remove();
-                    if (mostPopularHeader) mostPopularHeader.remove();
-                }
-            }
-        });
-        
-        // Genre sections functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(function() {
-                if (typeof window.appendGenreSections === 'undefined') {
-                    // Create genre sections function
-                    window.appendGenreSections = function(genreSections) {
-                        const feedContainer = document.querySelector('main .container-xxl') || document.querySelector('main');
-                        if (!feedContainer || !genreSections) return;
-                        
+    <main class="container-xxl">
+        <header class="mb-4">
+            <h2 class="h4 text-white-50 mb-0" id="pageHeader">Continue Watching</h2>
+        </header>
+
+        <script>
+            // Navigation handling for categories and genres
+            document.addEventListener('click', function (e) {
+                if (e.target && e.target.id === 'homeLink') {
+                    // Handle home navigation
+                } else if (e.target && e.target.hasAttribute('data-genre')) {
+                    // Handle genre navigation
+                    // Clear genre sections and Most Popular section when switching to a specific genre
+                    const feedContainer = document.querySelector('main .container-xxl') || document.querySelector('main');
+                    if (feedContainer) {
                         feedContainer.querySelectorAll('.genre-section').forEach(section => section.remove());
-                        
-                        genreSections.forEach((section) => {
-                            if (section.videos && section.videos.length > 0) {
-                                const sectionContainer = document.createElement('div');
-                                sectionContainer.className = 'mb-5 genre-section';
-                                
-                                const header = document.createElement('header');
-                                header.className = 'mb-4';
-                                header.innerHTML = `<h2 class="h4 text-white-50 mb-0 clickable-genre-title" data-genre="${section.genre}" style="cursor: pointer; transition: color 0.2s ease;">${section.genre}</h2>`;
-                                
-                                // Add click handler to navigate to genre category
-                                const titleElement = header.querySelector('.clickable-genre-title');
-                                titleElement.addEventListener('click', () => {
-                                    const genre = section.genre;
-                                    
-                                    // Update navigation active states
-                                    document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
-                                    const genreLink = document.querySelector(`[data-genre="${genre}"]`);
-                                    if (genreLink) {
-                                        genreLink.classList.add('active');
-                                    }
-                                    
-                                    // Trigger genre navigation using existing setSortBy function
-                                    if (typeof window.setSortBy === 'function') {
-                                        window.setSortBy(`genre:${genre}`);
-                                    } else {
-                                        // Fallback: trigger genre link click if setSortBy not available
+                        // Clear Most Popular section
+                        const mostPopularSection = document.getElementById('most-popular-section');
+                        const mostPopularHeader = document.getElementById('most-popular-header');
+                        if (mostPopularSection) mostPopularSection.remove();
+                        if (mostPopularHeader) mostPopularHeader.remove();
+                    }
+                }
+            });
+
+            // Genre sections functionality
+            document.addEventListener('DOMContentLoaded', function () {
+                setTimeout(function () {
+                    if (typeof window.appendGenreSections === 'undefined') {
+                        // Create genre sections function
+                        window.appendGenreSections = function (genreSections) {
+                            const feedContainer = document.querySelector('main .container-xxl') || document.querySelector('main');
+                            if (!feedContainer || !genreSections) return;
+
+                            feedContainer.querySelectorAll('.genre-section').forEach(section => section.remove());
+
+                            genreSections.forEach((section) => {
+                                if (section.videos && section.videos.length > 0) {
+                                    const sectionContainer = document.createElement('div');
+                                    sectionContainer.className = 'mb-5 genre-section';
+
+                                    const header = document.createElement('header');
+                                    header.className = 'mb-4';
+                                    header.innerHTML = `<h2 class="h4 text-white-50 mb-0 clickable-genre-title" data-genre="${section.genre}" style="cursor: pointer; transition: color 0.2s ease;">${section.genre}</h2>`;
+
+                                    // Add click handler to navigate to genre category
+                                    const titleElement = header.querySelector('.clickable-genre-title');
+                                    titleElement.addEventListener('click', () => {
+                                        const genre = section.genre;
+
+                                        // Update navigation active states
+                                        document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+                                        const genreLink = document.querySelector(`[data-genre="${genre}"]`);
                                         if (genreLink) {
-                                            genreLink.click();
+                                            genreLink.classList.add('active');
                                         }
-                                    }
-                                });
-                                
-                                // Add hover effects
-                                titleElement.addEventListener('mouseenter', () => {
-                                    titleElement.style.color = '#ffffff';
-                                });
-                                titleElement.addEventListener('mouseleave', () => {
-                                    titleElement.style.color = '';
-                                });
-                                
-                                const videosGrid = document.createElement('div');
-                                videosGrid.className = 'row row-cols-1 row-cols-md-3 mx-4 my-6 text-center';
-                                
-                                section.videos.forEach((video) => {
-                                    const cardHTML = window.createCardHTML ? window.createCardHTML(video) : 
-                                        `<div class="col-6 col-md-4 col-lg-3 mb-4">
+
+                                        // Trigger genre navigation using existing setSortBy function
+                                        if (typeof window.setSortBy === 'function') {
+                                            window.setSortBy(`genre:${genre}`);
+                                        } else {
+                                            // Fallback: trigger genre link click if setSortBy not available
+                                            if (genreLink) {
+                                                genreLink.click();
+                                            }
+                                        }
+                                    });
+
+                                    // Add hover effects
+                                    titleElement.addEventListener('mouseenter', () => {
+                                        titleElement.style.color = '#ffffff';
+                                    });
+                                    titleElement.addEventListener('mouseleave', () => {
+                                        titleElement.style.color = '';
+                                    });
+
+                                    const videosGrid = document.createElement('div');
+                                    videosGrid.className = 'row row-cols-1 row-cols-md-3 mx-4 my-6 text-center';
+
+                                    section.videos.forEach((video) => {
+                                        const cardHTML = window.createCardHTML ? window.createCardHTML(video) :
+                                            `<div class="col-6 col-md-4 col-lg-3 mb-4">
                                             <div class="card h-100 bg-dark text-white" data-video-id="${video.id}">
                                                 <img src="${video.poster}" class="card-img-top" alt="${video.title}">
                                                 <div class="card-body">
@@ -175,266 +177,274 @@
                                                 </div>
                                             </div>
                                         </div>`;
-                                    
-                                    const wrapper = document.createElement('div');
-                                    wrapper.innerHTML = cardHTML;
-                                    videosGrid.appendChild(wrapper.firstElementChild);
-                                });
-                                
-                                sectionContainer.appendChild(header);
-                                sectionContainer.appendChild(videosGrid);
-                                feedContainer.appendChild(sectionContainer);
-                            }
-                        });
-                    };
 
-                    // Define appendMostPopularSection function (same pattern as appendGenreSections)
-                    if (typeof window.appendMostPopularSection === 'undefined') {
-                        window.appendMostPopularSection = function(mostPopular) {
-                            const feedContainer = document.querySelector('main .container-xxl') || document.querySelector('main');
-                            if (!feedContainer || !mostPopular || !Array.isArray(mostPopular) || mostPopular.length === 0) return;
+                                        const wrapper = document.createElement('div');
+                                        wrapper.innerHTML = cardHTML;
+                                        videosGrid.appendChild(wrapper.firstElementChild);
+                                    });
 
-                            // Remove existing Most Popular section
-                            const existingSection = document.getElementById('most-popular-section');
-                            const existingHeader = document.getElementById('most-popular-header');
-                            if (existingSection) existingSection.remove();
-                            if (existingHeader) existingHeader.remove();
-
-                            // Create section header
-                            const sectionHeader = document.createElement('div');
-                            sectionHeader.id = 'most-popular-header';
-                            sectionHeader.className = 'mb-3 mx-4';
-                            sectionHeader.innerHTML = '<h3 class="h5 text-white-50 mb-0">Most Popular</h3>';
-
-                            // Create section container
-                            const sectionContainer = document.createElement('div');
-                            sectionContainer.id = 'most-popular-section';
-                            sectionContainer.className = 'row row-cols-1 row-cols-md-3 mx-4 my-6 text-center';
-
-                            const fragment = document.createDocumentFragment();
-                            mostPopular.forEach(video => {
-                                if (window.createCardHTML) {
-                                    if (window.videoCache) window.videoCache.set(video.id, video);
-                                    if (window.episodesMap) window.episodesMap.set(video.id, video);
-                                    
-                                    const wrapper = document.createElement('div');
-                                    wrapper.innerHTML = window.createCardHTML(video);
-                                    fragment.appendChild(wrapper.firstElementChild);
+                                    sectionContainer.appendChild(header);
+                                    sectionContainer.appendChild(videosGrid);
+                                    feedContainer.appendChild(sectionContainer);
                                 }
                             });
-                            sectionContainer.appendChild(fragment);
-
-                            // Insert after the feed (Continue Watching section) 
-                            const feed = document.getElementById('feed');
-                            if (feed && feed.nextSibling) {
-                                feedContainer.insertBefore(sectionHeader, feed.nextSibling);
-                                feedContainer.insertBefore(sectionContainer, sectionHeader.nextSibling);
-                            } else {
-                                feedContainer.appendChild(sectionHeader);
-                                feedContainer.appendChild(sectionContainer);
-                            }
                         };
-                    }
-                    
-                    // Intercept AJAX calls for genre sections
-                    const originalFetch = window.fetch;
-                    window.fetch = function(...args) {
-                        return originalFetch.apply(this, args).then(response => {
-                            if (response.url.includes('/catalog/data') && response.url.includes('sortBy=home')) {
-                                const clonedResponse = response.clone();
-                                clonedResponse.json().then(data => {
-                                    if (data.genreSections && Array.isArray(data.genreSections)) {
-                                        // Check if we're searching
-                                        const urlParams = new URLSearchParams(response.url.split('?')[1]);
-                                        const searchTerm = urlParams.get('search');
-                                        
-                                        let sectionsToShow = data.genreSections;
-                                        
-                                        if (searchTerm && searchTerm.trim()) {
-                                            // Filter genre sections to only show videos matching search
-                                            const searchLower = searchTerm.toLowerCase().trim();
-                                            sectionsToShow = data.genreSections.map(section => ({
-                                                ...section,
-                                                videos: section.videos.filter(video => 
-                                                    video.title && video.title.toLowerCase().includes(searchLower)
-                                                )
-                                            })).filter(section => section.videos.length > 0); // Only keep sections with matching videos
-                                        }
-                                        
-                                        // Store genre sections results count for no-results check
-                                        const totalGenreVideos = sectionsToShow.reduce((total, section) => total + section.videos.length, 0);
-                                        window.genreSectionsResultsCount = totalGenreVideos;
-                                        
-                                        setTimeout(() => {
-                                            window.appendGenreSections(sectionsToShow);
-                                            // Check for no results after genre sections are loaded
-                                            if (searchTerm && searchTerm.trim() && window.checkAndShowNoResults) {
-                                                window.checkAndShowNoResults(searchTerm);
-                                            }
-                                        }, 100);
+
+                        // Define appendMostPopularSection function (same pattern as appendGenreSections)
+                        if (typeof window.appendMostPopularSection === 'undefined') {
+                            window.appendMostPopularSection = function (mostPopular) {
+                                const feedContainer = document.querySelector('main .container-xxl') || document.querySelector('main');
+                                if (!feedContainer || !mostPopular || !Array.isArray(mostPopular) || mostPopular.length === 0) return;
+
+                                // Remove existing Most Popular section
+                                const existingSection = document.getElementById('most-popular-section');
+                                const existingHeader = document.getElementById('most-popular-header');
+                                if (existingSection) existingSection.remove();
+                                if (existingHeader) existingHeader.remove();
+
+                                // Create section header
+                                const sectionHeader = document.createElement('div');
+                                sectionHeader.id = 'most-popular-header';
+                                sectionHeader.className = 'mb-3 mx-4';
+                                sectionHeader.innerHTML = '<h3 class="h5 text-white-50 mb-0">Most Popular</h3>';
+
+                                // Create section container
+                                const sectionContainer = document.createElement('div');
+                                sectionContainer.id = 'most-popular-section';
+                                sectionContainer.className = 'row row-cols-1 row-cols-md-3 mx-4 my-6 text-center';
+
+                                const fragment = document.createDocumentFragment();
+                                mostPopular.forEach(video => {
+                                    if (window.createCardHTML) {
+                                        if (window.videoCache) window.videoCache.set(video.id, video);
+                                        if (window.episodesMap) window.episodesMap.set(video.id, video);
+
+                                        const wrapper = document.createElement('div');
+                                        wrapper.innerHTML = window.createCardHTML(video);
+                                        fragment.appendChild(wrapper.firstElementChild);
                                     }
-                                    
-                                    // Handle Most Popular section
-                                    if (data.mostPopular && Array.isArray(data.mostPopular)) {
-                                        // Check if we're searching
-                                        const urlParams = new URLSearchParams(response.url.split('?')[1]);
-                                        const searchTerm = urlParams.get('search');
-                                        
-                                        let mostPopularToShow = data.mostPopular;
-                                        
-                                        if (searchTerm && searchTerm.trim()) {
-                                            // Filter Most Popular to only show videos matching search
-                                            const searchLower = searchTerm.toLowerCase().trim();
-                                            mostPopularToShow = data.mostPopular.filter(video => 
-                                                video.title && video.title.toLowerCase().includes(searchLower)
-                                            );
-                                        }
-                                        
-                                        setTimeout(() => {
-                                            if (window.appendMostPopularSection && mostPopularToShow.length > 0) {
-                                                window.appendMostPopularSection(mostPopularToShow);
-                                            }
-                                        }, 50); // Show Most Popular before genre sections
-                                    }
-                                }).catch(error => console.error('Sections fetch failed:', error));
-                            }
-                            return response;
-                        });
-                    };
-                    
-                    // Load genre sections on page load (only if we're on Home category)
-                    if (window.location.search.includes('profileId')) {
-                        setTimeout(() => {
-                            const urlParams = new URLSearchParams(window.location.search);
-                            const profileId = urlParams.get('profileId');
-                            const sortBy = urlParams.get('sortBy');
-                            
-                            // Validate profileId and check if we're on Home category
-                            if (profileId && profileId.trim() && (!sortBy || sortBy === 'home')) {
-                                fetch(`/catalog/data?offset=0&limit=10&profileId=${encodeURIComponent(profileId)}&sortBy=home&requestCategory=home`)
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        // Handle Most Popular section
-                                        if (data.mostPopular && Array.isArray(data.mostPopular) && data.mostPopular.length > 0 && window.appendMostPopularSection) {
-                                            window.appendMostPopularSection(data.mostPopular);
-                                        }
-                                        // Handle genre sections
+                                });
+                                sectionContainer.appendChild(fragment);
+
+                                // Insert after the feed (Continue Watching section) 
+                                const feed = document.getElementById('feed');
+                                if (feed && feed.nextSibling) {
+                                    feedContainer.insertBefore(sectionHeader, feed.nextSibling);
+                                    feedContainer.insertBefore(sectionContainer, sectionHeader.nextSibling);
+                                } else {
+                                    feedContainer.appendChild(sectionHeader);
+                                    feedContainer.appendChild(sectionContainer);
+                                }
+                            };
+                        }
+
+                        // Intercept AJAX calls for genre sections
+                        const originalFetch = window.fetch;
+                        window.fetch = function (...args) {
+                            return originalFetch.apply(this, args).then(response => {
+                                if (response.url.includes('/catalog/data') && response.url.includes('sortBy=home')) {
+                                    const clonedResponse = response.clone();
+                                    clonedResponse.json().then(data => {
                                         if (data.genreSections && Array.isArray(data.genreSections)) {
-                                            window.appendGenreSections(data.genreSections);
+                                            // Check if we're searching
+                                            const urlParams = new URLSearchParams(response.url.split('?')[1]);
+                                            const searchTerm = urlParams.get('search');
+
+                                            let sectionsToShow = data.genreSections;
+
+                                            if (searchTerm && searchTerm.trim()) {
+                                                // Filter genre sections to only show videos matching search
+                                                const searchLower = searchTerm.toLowerCase().trim();
+                                                sectionsToShow = data.genreSections.map(section => ({
+                                                    ...section,
+                                                    videos: section.videos.filter(video =>
+                                                        video.title && video.title.toLowerCase().includes(searchLower)
+                                                    )
+                                                })).filter(section => section.videos.length > 0); // Only keep sections with matching videos
+                                            }
+
+                                            // Store genre sections results count for no-results check
+                                            const totalGenreVideos = sectionsToShow.reduce((total, section) => total + section.videos.length, 0);
+                                            window.genreSectionsResultsCount = totalGenreVideos;
+
+                                            setTimeout(() => {
+                                                window.appendGenreSections(sectionsToShow);
+                                                // Check for no results after genre sections are loaded
+                                                if (searchTerm && searchTerm.trim() && window.checkAndShowNoResults) {
+                                                    window.checkAndShowNoResults(searchTerm);
+                                                }
+                                            }, 100);
                                         }
-                                    })
-                                    .catch(error => console.error('Sections loading failed:', error));
-                            }
-                        }, 1500);
+
+                                        // Handle Most Popular section
+                                        if (data.mostPopular && Array.isArray(data.mostPopular)) {
+                                            // Check if we're searching
+                                            const urlParams = new URLSearchParams(response.url.split('?')[1]);
+                                            const searchTerm = urlParams.get('search');
+
+                                            let mostPopularToShow = data.mostPopular;
+
+                                            if (searchTerm && searchTerm.trim()) {
+                                                // Filter Most Popular to only show videos matching search
+                                                const searchLower = searchTerm.toLowerCase().trim();
+                                                mostPopularToShow = data.mostPopular.filter(video =>
+                                                    video.title && video.title.toLowerCase().includes(searchLower)
+                                                );
+                                            }
+
+                                            setTimeout(() => {
+                                                if (window.appendMostPopularSection && mostPopularToShow.length > 0) {
+                                                    window.appendMostPopularSection(mostPopularToShow);
+                                                }
+                                            }, 50); // Show Most Popular before genre sections
+                                        }
+                                    }).catch(error => console.error('Sections fetch failed:', error));
+                                }
+                                return response;
+                            });
+                        };
+
+                        // Load genre sections on page load (only if we're on Home category)
+                        if (window.location.search.includes('profileId')) {
+                            setTimeout(() => {
+                                const urlParams = new URLSearchParams(window.location.search);
+                                const profileId = urlParams.get('profileId');
+                                const sortBy = urlParams.get('sortBy');
+
+                                // Validate profileId and check if we're on Home category
+                                if (profileId && profileId.trim() && (!sortBy || sortBy === 'home')) {
+                                    fetch(`/catalog/data?offset=0&limit=10&profileId=${encodeURIComponent(profileId)}&sortBy=home&requestCategory=home`)
+                                        .then(response => response.json())
+                                        .then(data => {
+                                            // Handle Most Popular section
+                                            if (data.mostPopular && Array.isArray(data.mostPopular) && data.mostPopular.length > 0 && window.appendMostPopularSection) {
+                                                window.appendMostPopularSection(data.mostPopular);
+                                            }
+                                            // Handle genre sections
+                                            if (data.genreSections && Array.isArray(data.genreSections)) {
+                                                window.appendGenreSections(data.genreSections);
+                                            }
+                                        })
+                                        .catch(error => console.error('Sections loading failed:', error));
+                                }
+                            }, 1500);
+                        }
                     }
-                }
-            }, 500);
-        });
-    </script>
+                }, 500);
+            });
+        </script>
 
-    <div
-            class="row row-cols-1 row-cols-md-3 mx-4 my-6 text-center"
-            id="feed"
-            data-page-size="<%= videosPerPage %>"
-            data-initial-size="<%= initialPageSize %>"
-    ></div>
-    <div id="feedSentinel" class="text-white-50" aria-live="polite">
-        <div id="feedLoader" class="feed-loader" role="status">
-            <span class="feed-loader__spinner" aria-hidden="true"></span>
-            <span class="feed-loader__label">Loading more videos…</span>
-        </div>
-    </div>
-
-</main>
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-
-<div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="videoModalLabel">Video title</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="row row-cols-1 row-cols-md-3 mx-4 my-6 text-center" id="feed" data-page-size="<%= videosPerPage %>"
+            data-initial-size="<%= initialPageSize %>"></div>
+        <div id="feedSentinel" class="text-white-50" aria-live="polite">
+            <div id="feedLoader" class="feed-loader" role="status">
+                <span class="feed-loader__spinner" aria-hidden="true"></span>
+                <span class="feed-loader__label">Loading more videos…</span>
             </div>
-            <div class="modal-body">
-                <div class="video-shell" id="videoShell">
-                    <video id="catalogVideoPlayer" preload="metadata"></video>
-                    <button class="overlay-play" id="overlayPlayButton" type="button">
-                        <i class="bi bi-play-fill"></i>
-                    </button>
-                    <div class="video-controls" id="videoControls">
-                        <div class="controls-left">
-                            <button class="control-btn" id="playPauseButton" type="button" aria-label="Play or pause">
-                                <i class="bi bi-play-fill"></i>
-                            </button>
-                            <button class="control-btn skip-btn" id="rewindButton" type="button" aria-label="Rewind 10 seconds">
-                                <span class="skip-indicator">10</span>
-                                <i class="bi bi-arrow-counterclockwise"></i>
-                            </button>
-                            <button class="control-btn skip-btn" id="forwardButton" type="button" aria-label="Forward 10 seconds">
-                                <span class="skip-indicator">10</span>
-                                <i class="bi bi-arrow-clockwise"></i>
-                            </button>
-                            <div class="timeline-group">
-                                <span class="time-label" id="currentTimeLabel">0:00</span>
-                                <input type="range" id="videoSeekBar" min="0" value="0" step="1" aria-label="Video timeline" />
-                                <span class="time-label" id="durationTimeLabel">0:00</span>
+        </div>
+
+    </main>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+    <div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="videoModalLabel">Video title</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="video-shell" id="videoShell">
+                        <video id="catalogVideoPlayer" preload="metadata"></video>
+                        <button class="overlay-play" id="overlayPlayButton" type="button">
+                            <i class="bi bi-play-fill"></i>
+                        </button>
+                        <div class="video-controls" id="videoControls">
+                            <div class="controls-left">
+                                <button class="control-btn" id="playPauseButton" type="button"
+                                    aria-label="Play or pause">
+                                    <i class="bi bi-play-fill"></i>
+                                </button>
+                                <button class="control-btn skip-btn" id="rewindButton" type="button"
+                                    aria-label="Rewind 10 seconds">
+                                    <span class="skip-indicator">10</span>
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                                <button class="control-btn skip-btn" id="forwardButton" type="button"
+                                    aria-label="Forward 10 seconds">
+                                    <span class="skip-indicator">10</span>
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                                <div class="timeline-group">
+                                    <span class="time-label" id="currentTimeLabel">0:00</span>
+                                    <input type="range" id="videoSeekBar" min="0" value="0" step="1"
+                                        aria-label="Video timeline" />
+                                    <span class="time-label" id="durationTimeLabel">0:00</span>
+                                </div>
+                            </div>
+                            <div class="controls-right">
+                                <button class="control-btn" id="nextEpisodeButton" type="button"
+                                    aria-label="Next episode">
+                                    <i class="bi bi-skip-end-fill"></i>
+                                </button>
+                                <button class="control-btn" id="episodeListButton" type="button"
+                                    aria-label="Episode list" data-bs-toggle="offcanvas"
+                                    data-bs-target="#episodeDrawer">
+                                    <i class="bi bi-list"></i>
+                                </button>
+                                <button class="control-btn" id="fullscreenButton" type="button"
+                                    aria-label="Toggle fullscreen">
+                                    <i class="bi bi-arrows-fullscreen"></i>
+                                </button>
                             </div>
                         </div>
-                        <div class="controls-right">
-                            <button class="control-btn" id="nextEpisodeButton" type="button" aria-label="Next episode">
-                                <i class="bi bi-skip-end-fill"></i>
-                            </button>
-                            <button class="control-btn" id="episodeListButton" type="button" aria-label="Episode list" data-bs-toggle="offcanvas" data-bs-target="#episodeDrawer">
-                                <i class="bi bi-list"></i>
-                            </button>
-                            <button class="control-btn" id="fullscreenButton" type="button" aria-label="Toggle fullscreen">
-                                <i class="bi bi-arrows-fullscreen"></i>
-                            </button>
-                        </div>
                     </div>
+                    <p id="videoModalDescription" class="mt-3 mb-0 small"></p>
                 </div>
-                <p id="videoModalDescription" class="mt-3 mb-0 small"></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Close</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<div class="offcanvas offcanvas-end bg-dark text-white" tabindex="-1" id="episodeDrawer" aria-labelledby="episodeDrawerLabel">
-    <div class="offcanvas-header">
-        <h5 id="episodeDrawerLabel">Episodes</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    <div class="offcanvas offcanvas-end bg-dark text-white" tabindex="-1" id="episodeDrawer"
+        aria-labelledby="episodeDrawerLabel">
+        <div class="offcanvas-header">
+            <h5 id="episodeDrawerLabel">Episodes</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"
+                aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+            <ul class="list-group list-group-flush" id="episodeList"></ul>
+        </div>
     </div>
-    <div class="offcanvas-body p-0">
-        <ul class="list-group list-group-flush" id="episodeList"></ul>
-    </div>
-</div>
 
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const toggle = document.getElementById('settingsToggle');
-    const menu   = document.getElementById('settingsMenu');
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const toggle = document.getElementById('settingsToggle');
+            const menu = document.getElementById('settingsMenu');
 
-    if (toggle && menu) {
-      toggle.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
+            if (toggle && menu) {
+                toggle.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
 
-        menu.classList.toggle('show');
-      });
-    }
+                    menu.classList.toggle('show');
+                });
+            }
 
-    document.querySelectorAll('.dropdown')
-      .forEach(dd => dd.addEventListener('hidden.bs.dropdown', () => {
-        document
-          .querySelectorAll('.dropdown-submenu .dropdown-menu.show')
-          .forEach(m => m.classList.remove('show'));
-      }));
-  });
-</script>
+            document.querySelectorAll('.dropdown')
+                .forEach(dd => dd.addEventListener('hidden.bs.dropdown', () => {
+                    document
+                        .querySelectorAll('.dropdown-submenu .dropdown-menu.show')
+                        .forEach(m => m.classList.remove('show'));
+                }));
+        });
+    </script>
 </body>
+
 </html>

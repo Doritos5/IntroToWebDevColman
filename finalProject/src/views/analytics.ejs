@@ -1,85 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Analytics</title>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link href="/catalog/styles.css" rel="stylesheet" />
 
     <style>
-        body {
-            margin: 0;
+        body.navbar-page {
             background-color: #000;
             color: #fff;
+            margin: 0;
             font-family: Arial, sans-serif;
         }
 
-        .analytics-container {
+        .analytics-page {
             max-width: 1100px;
             margin: 0 auto;
-            padding: 80px 24px 40px;
+            padding: 90px 24px 40px;
         }
 
-        h1 {
+        .analytics-title {
             color: #e50914;
-            font-size: 2.4rem;
-            margin: 0 0 8px;
+            font-size: 2.1rem;
+            font-weight: 600;
+            margin: 0 0 6px;
         }
 
-        .subtitle {
+        .analytics-subtitle {
             font-size: 0.95rem;
-            color: #bbbbbb;
-            margin-bottom: 32px;
+            color: #b3b3b3;
+            margin-bottom: 24px;
         }
 
-        h2 {
-            font-size: 1.25rem;
-            margin: 32px 0 12px;
+        .section-title {
+            font-size: 1.1rem;
+            margin: 24px 0 10px;
+            font-weight: 500;
         }
 
-        .chart-box {
-            background-color: #111;
-            border-radius: 14px;
+        .chart-card {
+            background-color: #141414;
+            border-radius: 10px;
             padding: 16px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
-            margin-bottom: 32px;
+            margin-bottom: 24px;
+            border: 1px solid #262626;
         }
 
-        .chart-box canvas {
+        .chart-card canvas {
             width: 100% !important;
-            height: 320px !important;
+            height: 280px !important;
         }
 
-        .note {
-            font-size: 0.8rem;
-            color: #888;
+        .chart-note {
+            font-size: 0.78rem;
+            color: #808080;
             margin-top: 4px;
         }
     </style>
 </head>
 
 <body class="navbar-page">
-<main class="analytics-container">
-    <h1>Analytics</h1>
-    <div class="subtitle">
+<main class="analytics-page">
+    <h1 class="analytics-title">Analytics</h1>
+    <div class="analytics-subtitle">
         Viewing activity and content performance overview.
     </div>
 
     <section>
-        <h2>Daily Views per Profile (Last 7 Days)</h2>
-        <div class="chart-box">
+        <h2 class="section-title">Daily Views per Profile (Last 7 Days)</h2>
+        <div class="chart-card">
             <canvas id="dailyViewsChart"></canvas>
-            <div class="note">
+            <div class="chart-note">
                 Each color represents a profile. Days without data are shown as 0 views.
             </div>
         </div>
     </section>
 
     <section>
-        <h2>Content Popularity by Genre (Last 90 Days)</h2>
-        <div class="chart-box">
+        <h2 class="section-title">Content Popularity by Genre (Last 90 Days)</h2>
+        <div class="chart-card">
             <canvas id="genreChart"></canvas>
-            <div class="note">
+            <div class="chart-note">
                 Based on completed viewing sessions by genre.
             </div>
         </div>
@@ -94,9 +97,7 @@
 
     const barColors = ['#e50914', '#46d369', '#3b82f6', '#facc15', '#a855f7', '#22c55e'];
 
-    // Daily views chart
     const dailyCtx = document.getElementById('dailyViewsChart');
-
     const preparedDatasets = (dailyViewsDatasets || []).map((ds, index) => ({
         label: ds.label,
         data: ds.data,
@@ -116,26 +117,24 @@
                 legend: {
                     labels: {
                         color: '#ffffff',
-                        font: { size: 11 }
+                        font: { size: 10 }
                     }
                 }
             },
             scales: {
                 x: {
                     ticks: { color: '#ffffff' },
-                    grid: { color: 'rgba(255,255,255,0.08)' }
+                    grid: { color: 'rgba(255,255,255,0.06)' }
                 },
                 y: {
                     ticks: { color: '#ffffff', precision: 0 },
-                    grid: { color: 'rgba(255,255,255,0.15)' }
+                    grid: { color: 'rgba(255,255,255,0.12)' }
                 }
             }
         }
     });
 
-    // Genre popularity chart
     const genreCtx = document.getElementById('genreChart');
-
     const genreColors = genreLabels.map((_, i) => barColors[i % barColors.length]);
 
     new Chart(genreCtx, {
@@ -156,7 +155,7 @@
                     position: 'top',
                     labels: {
                         color: '#ffffff',
-                        font: { size: 11 }
+                        font: { size: 10 }
                     }
                 }
             }

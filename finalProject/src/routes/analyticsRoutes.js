@@ -8,19 +8,16 @@ router.get('/', async (req, res, next) => {
     const db = mongoose.connection.db;
     const sessions = db.collection('viewingsessions');
     const videos = db.collection('videos');
-
-    const today = new Date();
+    const profiles = db.collection('profiles');
 
     // ----- Daily views per profile (last 7 days, including today) -----
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-    sevenDaysAgo.setHours(0, 0, 0, 0);
+    const fromDate = new Date();
+    fromDate.setDate(fromDate.getDate() - 6);
+    fromDate.setHours(0, 0, 0, 0);
 
     const dailyAgg = await sessions.aggregate([
       {
-        $match: {
-          createdAt: { $gte: sevenDaysAgo }
-        }
+        $match: { createdAt: { $gte: fromDate } }
       },
       {
         $group: {
@@ -58,8 +55,19 @@ router.get('/', async (req, res, next) => {
       )
     ];
 
-    const dailyViewsDatasets = profileIds.map((profileId, index) => ({
-      label: `Profile ${index + 1}`,
+    // Fetch profile names by their "id" field
+    const profileDocs = await profiles
+      .find({ id: { $in: profileIds } })
+      .project({ id: 1, displayName: 1, name: 1 })
+      .toArray();
+
+    const profileNameById = {};
+    profileDocs.forEach(p => {
+      profileNameById[p.id] = p.displayName || p.name || `Profile ${p.id}`;
+    });
+
+    const dailyViewsDatasets = profileIds.map(profileId => ({
+      label: profileNameById[profileId] || `Profile ${profileId}`,
       data: dailyViewsLabels.map(date => {
         const day = dailyAgg.find(row => row._id === date);
         if (!day) return 0;
@@ -74,11 +82,7 @@ router.get('/', async (req, res, next) => {
     ninetyDaysAgo.setHours(0, 0, 0, 0);
 
     const genreAgg = await sessions.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: ninetyDaysAgo }
-        }
-      },
+      { $match: { createdAt: { $gte: ninetyDaysAgo } } },
       {
         $lookup: {
           from: 'videos',
