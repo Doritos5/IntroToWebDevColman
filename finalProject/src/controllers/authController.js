@@ -46,9 +46,13 @@ async function login (req, res) {
 }
 
 async function logout (req, res) {
+    const wantsJson = req.headers['x-requested-with'] === 'XMLHttpRequest';
     req.session.destroy(() => {
         res.clearCookie('connect.sid');
-        return res.redirect('/');
+        if (wantsJson) {
+            return res.status(200).json({ message: 'Logged out' });
+        }
+        return res.redirect('/login');
     });
 }
 
@@ -114,7 +118,8 @@ async function renderSettingsPage(req, res) {
         const userEmail = req.session.user.email;
         const user = await getUserByEmail(userEmail, { hydrate: true });
         res.render('settings', {
-            profiles: user.profiles || []
+            profiles: user.profiles || [],
+            user: req.session.user
         });
     } catch (error) {
         console.error('Error rendering settings page:', error);

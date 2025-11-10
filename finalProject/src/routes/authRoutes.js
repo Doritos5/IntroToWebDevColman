@@ -14,6 +14,12 @@ router.get('/', (req, res) => {
     res.render('login');
 });
 
+// Alias for login page to support redirects to /login
+router.get('/login', (req, res) => {
+    if (req.session?.user) return res.redirect('/profiles_page');
+    res.render('login');
+});
+
 router.post('/login', login);
 router.post('/logout', logout);
 router.get('/register', (req, res) => {
