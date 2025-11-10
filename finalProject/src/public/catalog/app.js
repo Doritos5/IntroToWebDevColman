@@ -48,6 +48,7 @@ let episodesMap = new Map();
 let progressInterval = null;
 let resumePosition = 0;
 let isSeeking = false;
+let searchDebounceTimer = null;
 let episodesLoaded = false;
 let episodeDrawerInstance = null;
 let episodeOrder = [];
@@ -75,8 +76,6 @@ function ensureProfileSelected() {
 
 function createCardHTML(item) {
     const isLiked = likedIds.has(item.id);
-    const buttonText = isLiked ? 'Liked' : 'Like';
-    const buttonClass = isLiked ? 'btn-danger' : 'btn-outline-light';
     const badges = (item.genres || [])
         .map((genre) => `<span class="badge text-bg-secondary me-1 mb-1">${genre}</span>`)
         .join('');
@@ -85,26 +84,84 @@ function createCardHTML(item) {
         ? `<p class="card-text text-white-50 small mb-3">${item.description.slice(0, 90)}${item.description.length > 90 ? '…' : ''}</p>`
         : '';
 
+    // Determine content type
+    const isMovie = item.type === 'movie';
+    const typeIcon = isMovie 
+        ? '<i class="bi bi-film text-warning"></i>' 
+        : '<i class="bi bi-collection-play text-warning"></i>';
+    const typeTooltip = isMovie ? 'Movie' : 'Series';
+
     return `
       <div class="col-6 col-md-4 col-lg-3 mb-4">
-        <div class="card h-100 bg-dark text-white" data-video-id="${item.id}">
+        <div class="card h-100 bg-dark text-white position-relative" data-video-id="${item.id}">
+          <div class="type-icon-badge" title="${typeTooltip}">
+            ${typeIcon}
+          </div>
           <img src="${item.poster}" class="card-img-top" alt="${item.title}">
           <div class="card-body d-flex flex-column">
             <h5 class="card-title mb-1">${item.title}</h5>
             <div class="small text-white-50 mb-2">${item.year ?? ''}</div>
             ${descriptionSnippet}
             <div class="mb-3">${badges}</div>
-            <div class="mt-auto d-flex justify-content-between align-items-center">
-              <span class="small">
-                <i class="bi bi-heart-fill text-danger me-1"></i>
-                <span data-likes-id="${item.id}">${item.likes ?? 0}</span>
-              </span>
-              <button class="btn btn-sm ${buttonClass}" data-item-id="${item.id}" data-like-button>${buttonText}</button>
+            <div class="mt-auto">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="like-container" data-item-id="${item.id}" data-like-button>
+                  <i class="bi ${isLiked ? 'bi-heart-fill' : 'bi-heart'} like-heart ${isLiked ? 'liked' : ''}" 
+                     data-item-id="${item.id}"></i>
+                  <span class="like-count ms-1" data-likes-id="${item.id}">${item.likes ?? 0}</span>
+                </div>
+                <span class="text-warning rating-display">
+                  <i class="bi bi-star-fill me-1"></i>
+                  ${item.rating ? item.rating.toFixed(1) : '0.0'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>`;
 }
+
+// Make createCardHTML and caches available globally for use in EJS view
+window.createCardHTML = createCardHTML;
+window.videoCache = videoCache;
+window.episodesMap = episodesMap;
+
+function addInteractions() {
+    // Add parallax effect to cards
+    document.addEventListener('mousemove', (e) => {
+        const cards = document.querySelectorAll('.card');
+        
+        cards.forEach(card => {
+            const rect = card.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            const deltaX = (e.clientX - centerX) / rect.width;
+            const deltaY = (e.clientY - centerY) / rect.height;
+            
+            // Tilt effect
+            if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) {
+                const rotateY = deltaX * 5;
+                const rotateX = -deltaY * 5;
+                
+                card.style.transform = `perspective(1000px) rotateY(${rotateY}deg) rotateX(${rotateX}deg) translateZ(10px)`;
+            } else {
+                card.style.transform = '';
+            }
+        });
+    });
+
+    // Reset transforms when mouse leaves the page
+    document.addEventListener('mouseleave', () => {
+        document.querySelectorAll('.like-container, .card').forEach(el => {
+            el.style.transform = '';
+            el.style.filter = '';
+        });
+    });
+}
+
+// Initialize interactions when page loads
+setTimeout(addInteractions, 1000);
 
 function appendVideos(videos) {
     const fragment = document.createDocumentFragment();
@@ -120,6 +177,11 @@ function appendVideos(videos) {
 
 function setLoadingState(active) {
     if (!sentinel) return;
+
+    // Don't show loading indicator during search
+    if (activeSearchTerm && activeSearchTerm.trim()) {
+        active = false;
+    }
 
     sentinel.classList.toggle('active', active);
 
@@ -144,13 +206,16 @@ function resetFeed() {
     videoCache = new Map();
     setLoadingState(false);
     if (sentinel) {
-        sentinel.classList.remove('hidden');
+        // Hide sentinel during search, show for normal pagination
+        if (activeSearchTerm && activeSearchTerm.trim()) {
+            sentinel.classList.add('hidden');
+        } else {
+            sentinel.classList.remove('hidden');
+        }
     }
-    if (observer && sentinel) {
+    if (observer && sentinel && (!activeSearchTerm || !activeSearchTerm.trim())) {
         observer.observe(sentinel);
     }
-    feed.innerHTML = '';
-    videoCache = new Map();
 }
 
 function updateLikedIds(likedContent) {
@@ -512,8 +577,12 @@ async function fetchCatalogPage() {
     }
     
     isLoading = true;
-    sentinel?.classList.remove('hidden');
-    setLoadingState(true);
+    
+    // Don't show loading elements during search
+    if (!activeSearchTerm || !activeSearchTerm.trim()) {
+        sentinel?.classList.remove('hidden');
+        setLoadingState(true);
+    }
 
     const limit = isFirstBatch ? initialLoadSize : standardLoadSize;
     const safeLimit = limit > 0 ? limit : initialLoadSize;
@@ -592,6 +661,65 @@ async function fetchCatalogPage() {
         const catalogItems = Array.isArray(data.catalog) ? data.catalog : [];
         appendVideos(catalogItems);
 
+        // Clear Most Popular section if we're searching (it will be recreated below if there are matching results)
+        if (activeSearchTerm && activeSearchTerm.trim()) {
+            const existingSection = document.getElementById('most-popular-section');
+            const existingHeader = document.getElementById('most-popular-header');
+            if (existingSection) existingSection.remove();
+            if (existingHeader) existingHeader.remove();
+        }
+
+        // Handle Most Popular section for Home category only
+        if (activeSortBy === 'home' && data.mostPopular && Array.isArray(data.mostPopular) && data.mostPopular.length > 0) {
+            let mostPopularToShow = data.mostPopular;
+            
+            // Filter Most Popular based on search if searching
+            if (activeSearchTerm && activeSearchTerm.trim()) {
+                const searchLower = activeSearchTerm.toLowerCase().trim();
+                mostPopularToShow = data.mostPopular.filter(video => 
+                    video.title && video.title.toLowerCase().includes(searchLower)
+                );
+            }
+            
+            // Only show Most Popular section if there are items to display after filtering
+            if (window.appendMostPopularSection && mostPopularToShow.length > 0) {
+                window.appendMostPopularSection(mostPopularToShow);
+            }
+        }
+
+        // Handle search results and no-results message for all categories
+        if (activeSearchTerm && isFirstBatch) {
+            if (activeSortBy === 'home') {
+                // Home category: Handle Continue Watching section
+                const pageHeader = document.getElementById('pageHeader');
+                if (pageHeader) {
+                    // Hide pageHeader if there are no Continue Watching results
+                    pageHeader.style.display = catalogItems.length > 0 ? 'block' : 'none';
+                }
+                
+                // Store Continue Watching results count for no-results check
+                window.continueWatchingResultsCount = catalogItems.length;
+                
+                // Check for no results after a delay to let genre sections load
+                setTimeout(() => {
+                    checkAndShowNoResults(activeSearchTerm);
+                }, 200);
+            } else {
+                // Other categories: Track main results and check immediately
+                window.mainResultsCount = catalogItems.length;
+                checkAndShowNoResults(activeSearchTerm);
+            }
+        } else if (!activeSearchTerm) {
+            // Reset counters and hide message when not searching
+            if (activeSortBy === 'home') {
+                window.continueWatchingResultsCount = catalogItems.length;
+                window.genreSectionsResultsCount = 0; // Will be set by genre sections
+            } else {
+                window.mainResultsCount = catalogItems.length;
+            }
+            hideNoResultsMessage();
+        }
+
         nextOffset += catalogItems.length;
         const totalFromResponse = Number(data.total);
         totalItems = Number.isFinite(totalFromResponse) ? totalFromResponse : totalItems;
@@ -603,7 +731,7 @@ async function fetchCatalogPage() {
         isLoading = false;
     } finally {
         setLoadingState(false);
-        if (nextOffset >= totalItems) {
+        if (nextOffset >= totalItems || (activeSearchTerm && activeSearchTerm.trim())) {
             sentinel?.classList.add('hidden');
         } else {
             ensureContentFill();
@@ -676,10 +804,16 @@ function resetFeedForSort() {
     feed.innerHTML = '';
     videoCache = new Map();
     setLoadingState(false);
+    
     if (sentinel) {
-        sentinel.classList.remove('hidden');
+        // Hide sentinel during search, show for normal pagination
+        if (activeSearchTerm && activeSearchTerm.trim()) {
+            sentinel.classList.add('hidden');
+        } else {
+            sentinel.classList.remove('hidden');
+        }
     }
-    if (observer && sentinel) {
+    if (observer && sentinel && (!activeSearchTerm || !activeSearchTerm.trim())) {
         observer.observe(sentinel);
     }
 }
@@ -691,15 +825,24 @@ async function setSortBy(sortBy) {
         // Update page header based on category
         const pageHeader = document.getElementById('pageHeader');
         if (pageHeader) {
+            // Always show the header when switching categories (not during search)
+            pageHeader.style.display = 'block';
             if (sortBy === 'home') {
                 pageHeader.textContent = 'Continue Watching';
-            } else if (sortBy === 'popular') {
-                pageHeader.textContent = 'Most Popular';
             } else if (sortBy.startsWith('genre:')) {
                 const genre = sortBy.replace('genre:', '');
                 pageHeader.textContent = genre;
             }
         }
+        
+        // Close search when switching categories
+        if (activeSearchTerm || (searchInput && searchInput.classList.contains('active'))) {
+            closeSearch();
+            return; // closeSearch already handles the rest
+        }
+        
+        // Hide no-results message when switching categories
+        hideNoResultsMessage();
         
         // Reset pagination state when switching categories
         nextOffset = 0;
@@ -713,7 +856,11 @@ async function setSortBy(sortBy) {
             if (!profileData) return;
 
             isLoading = true;
-            setLoadingState(true);
+            
+            // Don't show loading elements during search
+            if (!activeSearchTerm || !activeSearchTerm.trim()) {
+                setLoadingState(true);
+            }
             
             const params = new URLSearchParams({
                 offset: '0',
@@ -778,34 +925,207 @@ async function setSortBy(sortBy) {
 // Make setSortBy available globally for genre title clicks
 window.setSortBy = setSortBy;
 
+function openSearch() {
+    if (!searchInput) return;
+    searchInput.classList.add('active');
+    searchInput.disabled = false;
+    
+    // Add class to disable magnifying glass
+    document.body.classList.add('search-active');
+    
+    searchInput.focus();
+}
+
+function closeSearch() {
+    if (!searchInput) return;
+    
+    // Clear debounce timer
+    if (searchDebounceTimer) {
+        clearTimeout(searchDebounceTimer);
+    }
+    
+    // Clear search
+    searchInput.value = '';
+    activeSearchTerm = '';
+    
+    // Close and disable input
+    searchInput.classList.remove('active');
+    searchInput.disabled = true;
+    
+    // Remove class to re-enable magnifying glass
+    document.body.classList.remove('search-active');
+    
+    // Show pageHeader and hide no-results message when search is cleared
+    if (activeSortBy === 'home') {
+        const pageHeader = document.getElementById('pageHeader');
+        if (pageHeader) {
+            pageHeader.style.display = 'block';
+        }
+    }
+    hideNoResultsMessage();
+    
+    resetFeed();
+    fetchCatalogPage();
+}
+
 function toggleSearchInput() {
     if (!searchInput) return;
-    searchInput.classList.toggle('active');
     if (searchInput.classList.contains('active')) {
-        searchInput.focus();
+        closeSearch();
+    } else {
+        openSearch();
+    }
+}
+
+function showNoResultsMessage(searchTerm, category) {
+    // Remove existing no-results message
+    const existingMessage = document.getElementById('no-results-message');
+    if (existingMessage) {
+        existingMessage.remove();
+    }
+    
+    // Generate category-specific message
+    let categoryText = '';
+    if (category === 'home') {
+        categoryText = '';
+    } else if (category === 'popular') {
+        categoryText = ' in Most Popular';
+    } else if (category && category.startsWith('genre:')) {
+        const genre = category.replace('genre:', '');
+        categoryText = ` in ${genre}`;
+    } else {
+        categoryText = ` in this category`;
+    }
+    
+    // Create new no-results message
+    const messageDiv = document.createElement('div');
+    messageDiv.id = 'no-results-message';
+    messageDiv.className = 'text-center mt-5 mb-5';
+    messageDiv.innerHTML = `
+        <div class="text-white-50">
+            <i class="bi bi-search mb-3" style="font-size: 3rem;"></i>
+            <h3 class="h4 mb-2">No matching titles found</h3>
+            <p class="mb-0">We couldn't find any content matching "${searchTerm}"${categoryText}</p>
+            <p class="small">Try adjusting your search or browse our categories</p>
+        </div>
+    `;
+    
+    // Insert after the main header
+    const mainElement = document.querySelector('main.container-xxl');
+    const headerElement = mainElement ? mainElement.querySelector('header') : null;
+    if (headerElement) {
+        headerElement.insertAdjacentElement('afterend', messageDiv);
+    }
+}
+
+function hideNoResultsMessage() {
+    try {
+        const existingMessage = document.getElementById('no-results-message');
+        if (existingMessage && existingMessage.parentNode) {
+            existingMessage.remove();
+        }
+    } catch (error) {
+        console.error('Error hiding no-results message:', error);
+    }
+}
+
+function checkAndShowNoResults(searchTerm, category = null) {
+    // Only check during active search
+    if (!searchTerm || !searchTerm.trim()) {
+        hideNoResultsMessage();
+        return;
+    }
+    
+    const currentCategory = category || activeSortBy;
+    
+    if (currentCategory === 'home') {
+        // For Home category, check if both Continue Watching and genre sections are empty
+        const continueWatchingCount = window.continueWatchingResultsCount || 0;
+        const genreSectionsCount = window.genreSectionsResultsCount || 0;
+        
+        if (continueWatchingCount === 0 && genreSectionsCount === 0) {
+            showNoResultsMessage(searchTerm, currentCategory);
+        } else {
+            hideNoResultsMessage();
+        }
+    } else {
+        // For other categories, check if main results are empty
+        const mainResultsCount = window.mainResultsCount || 0;
+        
+        if (mainResultsCount === 0) {
+            showNoResultsMessage(searchTerm, currentCategory);
+        } else {
+            hideNoResultsMessage();
+        }
+    }
+}
+
+// Make functions globally accessible for EJS template
+window.checkAndShowNoResults = checkAndShowNoResults;
+
+function debouncedSearch(searchTerm) {
+    try {
+        // Clear existing timer
+        if (searchDebounceTimer) {
+            clearTimeout(searchDebounceTimer);
+        }
+        
+        // Set new timer
+        searchDebounceTimer = setTimeout(() => {
+            try {
+                activeSearchTerm = searchTerm;
+                
+                // Show pageHeader and hide no-results message when search is cleared
+                if (!activeSearchTerm) {
+                    if (activeSortBy === 'home') {
+                        const pageHeader = document.getElementById('pageHeader');
+                        if (pageHeader) {
+                            pageHeader.style.display = 'block';
+                        }
+                    }
+                    hideNoResultsMessage();
+                }
+                
+                // Don't change category when searching - search within current category
+                resetFeed();
+                fetchCatalogPage();
+            } catch (error) {
+                console.error('Error in debounced search:', error);
+            }
+        }, 300); // 300ms delay
+    } catch (error) {
+        console.error('Error setting up debounced search:', error);
     }
 }
 
 function handleSearchInput(event) {
     const newTerm = event.target.value.trim();
-    if (newTerm === activeSearchTerm) {
+    
+    // If search is cleared immediately, handle it without delay
+    if (newTerm === '' && activeSearchTerm !== '') {
+        if (searchDebounceTimer) {
+            clearTimeout(searchDebounceTimer);
+        }
+        
+        activeSearchTerm = '';
+        
+        if (activeSortBy === 'home') {
+            const pageHeader = document.getElementById('pageHeader');
+            if (pageHeader) {
+                pageHeader.style.display = 'block';
+            }
+        }
+        hideNoResultsMessage();
+        
+        resetFeed();
+        fetchCatalogPage();
         return;
     }
-
-    activeSearchTerm = newTerm;
     
-    // Reset sort to title when searching
-    if (activeSortBy !== 'home') {
-        activeSortBy = 'home';
-        // Update navigation styling
-        const homeLink = document.getElementById('homeLink');
-        const mostPopularLink = document.getElementById('mostPopularLink');
-        homeLink?.classList.add('active');
-        mostPopularLink?.classList.remove('active');
+    // For other changes, use debounced search
+    if (newTerm !== activeSearchTerm) {
+        debouncedSearch(newTerm);
     }
-    
-    resetFeed();
-    fetchCatalogPage();
 }
 
 function getProfileId() {
@@ -921,9 +1241,9 @@ async function openVideoModal(video) {
 }
 
 function handleFeedClick(event) {
-    const likeButton = event.target.closest('[data-like-button]');
-    if (likeButton) {
-        handleLikeButton(likeButton);
+    const likeContainer = event.target.closest('[data-like-button]');
+    if (likeContainer) {
+        handleHeartLike(likeContainer);
         event.stopPropagation();
         return;
     }
@@ -959,8 +1279,8 @@ function rainbow(btn) {
     }, { once: true });
 }
 
-async function handleLikeButton(button) {
-    const itemId = button.dataset.itemId;
+async function handleHeartLike(likeContainer) {
+    const itemId = likeContainer.dataset.itemId;
     const profileId = getProfileId();
 
     if (!itemId || !profileId) {
@@ -968,10 +1288,23 @@ async function handleLikeButton(button) {
         return;
     }
 
-    const isUnlike = button.classList.contains('btn-danger');
-    const endpoint = isUnlike ? '/likes/unlike' : '/likes/like';
+    const heartIcon = likeContainer.querySelector('.like-heart');
+    const likesSpan = likeContainer.querySelector('.like-count');
+    
+    if (!heartIcon || !likesSpan) return;
 
-    button.disabled = true;
+    const isCurrentlyLiked = heartIcon.classList.contains('liked');
+    const endpoint = isCurrentlyLiked ? '/likes/unlike' : '/likes/like';
+
+    // Prevent double-clicking
+    if (likeContainer.dataset.processing === 'true') return;
+    likeContainer.dataset.processing = 'true';
+
+    // Add ripple effect
+    likeContainer.classList.add('ripple');
+    setTimeout(() => {
+        likeContainer.classList.remove('ripple');
+    }, 600);
 
     try {
         const response = await fetch(endpoint, {
@@ -985,30 +1318,160 @@ async function handleLikeButton(button) {
             throw new Error(result.message || 'Failed to process request');
         }
 
-        const likesSpan = document.querySelector(`[data-likes-id="${itemId}"]`);
-        if (likesSpan) {
-            likesSpan.textContent = result.newLikesCount;
-        }
-
-        if (isUnlike) {
+        if (isCurrentlyLiked) {
             likedIds.delete(itemId);
-            button.textContent = 'Like';
-            button.classList.remove('btn-danger');
-            button.classList.add('btn-outline-light');
+            heartIcon.classList.remove('liked', 'bi-heart-fill');
+            heartIcon.classList.add('bi-heart');
+            
+            animateCounterDown(likesSpan, parseInt(likesSpan.textContent), result.newLikesCount);
+            
         } else {
             likedIds.add(itemId);
-            button.textContent = 'Liked';
-            button.classList.remove('btn-outline-light');
-            button.classList.add('btn-danger');
-            popHeart(button);
-            rainbow(button);
+            heartIcon.classList.remove('bi-heart');
+            heartIcon.classList.add('bi-heart-fill', 'liked');
+            
+            createParticleBurst(likeContainer);
+            createFloatingHearts(likeContainer);
+            animateCounterUp(likesSpan, parseInt(likesSpan.textContent), result.newLikesCount);
         }
     } catch (error) {
         console.error('Like/Unlike error:', error);
         alert(error.message);
     } finally {
-        button.disabled = false;
+        setTimeout(() => {
+            likeContainer.dataset.processing = 'false';
+        }, 200);
     }
+}
+
+function createParticleBurst(container) {
+    const rect = container.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    const burstContainer = document.createElement('div');
+    burstContainer.className = 'particle-burst';
+    burstContainer.style.left = centerX + 'px';
+    burstContainer.style.top = centerY + 'px';
+    
+    for (let i = 0; i < 12; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        
+        const angle = (i / 12) * Math.PI * 2;
+        const velocity = 20 + Math.random() * 30;
+        const size = 3 + Math.random() * 4;
+        
+        particle.style.width = size + 'px';
+        particle.style.height = size + 'px';
+        particle.style.left = '0px';
+        particle.style.top = '0px';
+        
+        // Set custom animation with random trajectory
+        const endX = Math.cos(angle) * velocity;
+        const endY = Math.sin(angle) * velocity;
+        
+        particle.style.setProperty('--end-x', endX + 'px');
+        particle.style.setProperty('--end-y', endY + 'px');
+        
+        // Dynamic animation keyframes
+        particle.style.animation = `particleExplode 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`;
+        particle.style.transform = `translate(${endX}px, ${endY}px)`;
+        
+        burstContainer.appendChild(particle);
+    }
+    
+    document.body.appendChild(burstContainer);
+    
+    // Clean up
+    setTimeout(() => {
+        burstContainer.remove();
+    }, 1200);
+}
+
+function createFloatingHearts(container) {
+    const rect = container.getBoundingClientRect();
+    const baseX = rect.left + rect.width / 2;
+    const baseY = rect.top + rect.height / 2;
+    
+    for (let i = 1; i <= 3; i++) {
+        const heart = document.createElement('i');
+        heart.className = `bi bi-heart-fill floating-heart-modern heart-${i}`;
+        
+        // Slight offset for each heart
+        const offsetX = (Math.random() - 0.5) * 20;
+        const offsetY = (Math.random() - 0.5) * 10;
+        
+        heart.style.left = (baseX + offsetX) + 'px';
+        heart.style.top = (baseY + offsetY) + 'px';
+        
+        document.body.appendChild(heart);
+        
+        // Clean up after animation
+        const animationDuration = i === 2 ? 2200 : i === 3 ? 1800 : 2000;
+        setTimeout(() => {
+            heart.remove();
+        }, animationDuration);
+    }
+}
+
+function animateCounterUp(element, startValue, endValue) {
+    element.classList.add('animate-up');
+    
+    // Create number morphing effect
+    const duration = 800;
+    const startTime = performance.now();
+    
+    function updateNumber(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Use easing function for smooth animation
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        const currentValue = Math.round(startValue + (endValue - startValue) * easeOut);
+        
+        element.textContent = currentValue;
+        
+        if (progress < 1) {
+            requestAnimationFrame(updateNumber);
+        } else {
+            element.textContent = endValue;
+            setTimeout(() => {
+                element.classList.remove('animate-up');
+            }, 100);
+        }
+    }
+    
+    requestAnimationFrame(updateNumber);
+}
+
+function animateCounterDown(element, startValue, endValue) {
+    element.classList.add('animate-down');
+    
+    // Simple fade and scale animation for down
+    const duration = 600;
+    const startTime = performance.now();
+    
+    function updateNumber(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        const easeOut = 1 - Math.pow(1 - progress, 2);
+        const currentValue = Math.round(startValue + (endValue - startValue) * easeOut);
+        
+        element.textContent = currentValue;
+        
+        if (progress < 1) {
+            requestAnimationFrame(updateNumber);
+        } else {
+            element.textContent = endValue;
+            setTimeout(() => {
+                element.classList.remove('animate-down');
+            }, 100);
+        }
+    }
+    
+    requestAnimationFrame(updateNumber);
 }
 
 function setupModalEvents() {
@@ -1113,11 +1576,17 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeObserver();
     fetchCatalogPage();
 
+    // Add click handler to feed for Continue Watching section
     feed.addEventListener('click', handleFeedClick);
+    
+    // Add click handler to main container for Most Popular and Genre sections
+    const mainContainer = document.querySelector('main');
+    if (mainContainer) {
+        mainContainer.addEventListener('click', handleFeedClick);
+    }
 
     // Navigation links
     const homeLink = document.getElementById('homeLink');
-    const mostPopularLink = document.getElementById('mostPopularLink');
     
     homeLink?.addEventListener('click', (e) => {
         e.preventDefault();
@@ -1125,21 +1594,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!homeLink.classList.contains('active')) {
             setSortBy('home');
             homeLink.classList.add('active');
-            mostPopularLink?.classList.remove('active');
-            // Clear active state from all genre links
-            document.querySelectorAll('[data-genre]').forEach(link => {
-                link.classList.remove('active');
-            });
-        }
-    });
-    
-    mostPopularLink?.addEventListener('click', (e) => {
-        e.preventDefault();
-        // Only process if not already active
-        if (!mostPopularLink.classList.contains('active')) {
-            setSortBy('popular');
-            mostPopularLink.classList.add('active');
-            homeLink?.classList.remove('active');
             // Clear active state from all genre links
             document.querySelectorAll('[data-genre]').forEach(link => {
                 link.classList.remove('active');
@@ -1157,7 +1611,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 setSortBy(`genre:${genre}`);
                 genreLink.classList.add('active');
                 homeLink?.classList.remove('active');
-                mostPopularLink?.classList.remove('active');
                 // Clear active state from other genre links
                 document.querySelectorAll('[data-genre]').forEach(link => {
                     if (link !== genreLink) {
@@ -1170,6 +1623,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     searchIcon?.addEventListener('click', toggleSearchInput);
     searchInput?.addEventListener('input', handleSearchInput);
+    
+    // Close button event listener
+    const searchCloseBtn = document.getElementById('searchCloseBtn');
+    searchCloseBtn?.addEventListener('click', closeSearch);
+    
+    // Add keyboard support for search
+    searchInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeSearch();
+        }
+    });
 
     overlayPlayButton?.addEventListener('click', togglePlay);
     playPauseButton?.addEventListener('click', togglePlay);
