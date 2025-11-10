@@ -46,9 +46,13 @@ async function login (req, res) {
 }
 
 async function logout (req, res) {
+    const wantsJson = req.headers['x-requested-with'] === 'XMLHttpRequest';
     req.session.destroy(() => {
         res.clearCookie('connect.sid');
-        return res.redirect('/');
+        if (wantsJson) {
+            return res.status(200).json({ message: 'Logged out' });
+        }
+        return res.redirect('/login');
     });
 }
 

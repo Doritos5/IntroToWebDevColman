@@ -172,11 +172,8 @@ async function toggleLike() {
 
 function setupSignOut() {
     const signOut = document.getElementById('signOutLink');
-    if (!signOut) {
-        return;
-    }
-
-    signOut.addEventListener('click', (event) => {
+    if (!signOut) return;
+    signOut.addEventListener('click', async (event) => {
         event.preventDefault();
         try {
             localStorage.removeItem('selectedProfileId');
@@ -184,7 +181,14 @@ function setupSignOut() {
         } catch (error) {
             console.warn('Failed to clear profile selection', error);
         }
-        window.location.replace('/');
+        try {
+            const resp = await fetch('/logout', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+            if (!resp.ok) console.warn('Logout request failed', resp.status);
+        } catch (e) {
+            console.warn('Logout network error', e);
+        } finally {
+            window.location.replace('/login');
+        }
     });
 }
 
