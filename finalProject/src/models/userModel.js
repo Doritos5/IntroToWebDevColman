@@ -150,6 +150,17 @@ async function updateUserPassword(id, newPlainPassword) {
     return toPlain(user);
 }
 
+async function deleteUserById(id) {
+    if (!id) {
+        return null; }
+
+    const result = await User.deleteOne({ id });
+
+    if (result.deletedCount > 0) {
+        return true; }
+    return false;
+}
+
 async function updateProfile(email, profileId, updates) {
     const user = await getUserByEmail(email);
     if (!user) {
@@ -210,6 +221,7 @@ module.exports = {
     getUserByEmail,
     updateUser,
     updateUserPassword,
+    deleteUserById,
     updateProfile,
     addLikeToProfile,
     addProfileToUser,
