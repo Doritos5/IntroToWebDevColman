@@ -23,6 +23,7 @@ const videoSchema = new mongoose.Schema({
     genres: { type: [String], default: [] },
     poster: { type: String, default: '' },
     likes: { type: Number, default: 0 },
+    rating: { type: Number, default: 0.0, min: 0.0, max: 10.0 },
     videoPath: { type: String, required: true },
     type: {
         type: String,
@@ -448,7 +449,7 @@ async function getContinueWatching({ profileId, offset = 0, limit = 10, search =
         const paginatedItems = videoItems.slice(offset, offset + limit);
 
         return {
-            items: paginatedItems,
+            items: paginatedItems.map(video => toClientVideo(video)),
             total: totalFilteredItems,
             page: Math.floor(offset / limit) + 1,
             offset,
@@ -663,6 +664,40 @@ async function getCatalogByGenre({ genre, page = 1, offset, limit = 10, search =
     }
 }
 
+async function getMostPopular(limit = 10) {
+    try {
+        const videos = await Video.aggregate([
+            // Sort by likes
+            { $sort: { likes: -1, episodeNumber: 1 } },
+            
+            // Group series together to get only first episode per series
+            {
+                $group: {
+                    _id: {
+                        // Group by series ID for series, by video ID for movies
+                        seriesId: { $cond: [{ $eq: ['$type', 'series'] }, '$series', '$_id'] },
+                        type: '$type'
+                    },
+                    firstEpisode: { $first: '$$ROOT' }
+                }
+            },
+            
+            { $replaceRoot: { newRoot: '$firstEpisode' } },
+            
+            // Sort by likes (descending)
+            { $sort: { likes: -1 } },
+            
+            // Limit to specified number of items
+            { $limit: limit }
+        ]);
+
+        return videos.map(toClientVideo);
+    } catch (error) {
+        console.error('Error getting most popular videos:', error);
+        return [];
+    }
+}
+
 module.exports = {
     Video,
     Series,
@@ -679,5 +714,6 @@ module.exports = {
     getVideosByGenre,
     getAllGenres,
     getCatalogByGenre,
+    getMostPopular,
 };
 
