@@ -26,6 +26,8 @@ const initialLoadSize = feed?.dataset.initialSize;
 const standardLoadSize = feed?.dataset.pageSize;
 const MINIMUM_LOADER_DURATION_MS = 2000;
 const feedLoader = document.getElementById('feedLoader');
+const watchedToggle = document.getElementById('watchedOnlyToggle');
+const watchedToggleContainer = document.getElementById('watchedToggleContainer');
 
 if (feedLoader) {
     feedLoader.classList.remove('is-visible');
@@ -55,6 +57,76 @@ let episodeOrder = [];
 let currentSeriesId = null;
 let loadedSeriesId = null;
 let seriesEpisodesCache = new Map();
+let watchedOnly = false; // applies only to genre categories
+let watchedFilterCache = {
+    profileId: null,
+    genre: null,
+    movieIds: new Set(),
+    seriesIds: new Set(),
+    videoIds: new Set(),
+    loaded: false,
+};
+
+function normalizeId(val) {
+    if (!val) return null;
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object') {
+        // Handle Buffer-like shape from JSON
+        if (val.type === 'Buffer' && Array.isArray(val.data)) {
+            try { return Array.from(val.data).map((b) => b.toString(16).padStart(2, '0')).join(''); } catch (_) { /* ignore */ }
+        }
+        if (typeof val.toString === 'function') {
+            const s = val.toString();
+            if (s && s !== '[object Object]') return s;
+        }
+    }
+    return null;
+}
+
+async function loadWatchedSetsForGenre(profileId, genre) {
+    try {
+        if (
+            watchedFilterCache.loaded &&
+            watchedFilterCache.profileId === profileId &&
+            watchedFilterCache.genre === genre
+        ) {
+            return watchedFilterCache;
+        }
+        const url = `/catalog/debug/viewing-sessions?profileId=${encodeURIComponent(profileId)}&genre=${encodeURIComponent(genre)}&_=${Date.now()}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed to load watched sets');
+        const data = await res.json();
+        watchedFilterCache = {
+            profileId,
+            genre,
+            movieIds: new Set(Array.isArray(data.watchedMovieIds) ? data.watchedMovieIds : []),
+            seriesIds: new Set(Array.isArray(data.watchedSeriesIds) ? data.watchedSeriesIds : []),
+            videoIds: new Set(Array.isArray(data.watchedVideoIds) ? data.watchedVideoIds : []),
+            loaded: true,
+        };
+        return watchedFilterCache;
+    } catch (_) {
+    watchedFilterCache = { profileId: null, genre: null, movieIds: new Set(), seriesIds: new Set(), videoIds: new Set(), loaded: false };
+        return watchedFilterCache;
+    }
+}
+
+function applyWatchedFilterIfNeeded(items, currentProfileId, currentSortBy) {
+    if (!items || !Array.isArray(items)) return [];
+    if (!(currentSortBy && currentSortBy.startsWith('genre:'))) return items;
+    if (!watchedOnly) return items;
+    const filtered = items.filter((item) => {
+        const id = normalizeId(item.id);
+        const seriesId = normalizeId(item.seriesId);
+        if (watchedFilterCache.loaded) {
+            if (watchedFilterCache.movieIds.has(id) || watchedFilterCache.videoIds.has(id)) return true;
+            if (seriesId && watchedFilterCache.seriesIds.has(seriesId)) return true;
+            return false;
+        }
+        return false;
+    });
+    return filtered;
+}
 
 // ------------------------- Helpers -------------------------
 
@@ -170,7 +242,16 @@ function appendVideos(videos) {
         episodesMap.set(video.id, video);
         const wrapper = document.createElement('div');
         wrapper.innerHTML = createCardHTML(video);
-        fragment.appendChild(wrapper.firstElementChild);
+        const card = wrapper.firstElementChild;
+        if (watchedOnly && activeSortBy && activeSortBy.startsWith('genre:')) {
+            const badge = document.createElement('div');
+            badge.className = 'position-absolute top-0 end-0 m-2 px-2 py-1 bg-success text-black fw-semibold rounded-2';
+            badge.style.fontSize = '0.7rem';
+            badge.style.opacity = '0.85';
+            badge.textContent = 'Watched';
+            card.querySelector('.card')?.appendChild(badge);
+        }
+        fragment.appendChild(card);
     });
     feed.appendChild(fragment);
 }
@@ -604,8 +685,24 @@ async function fetchCatalogPage() {
     // Add category identifier to track request origin
     params.set('requestCategory', requestCategory);
 
+    // Add watchedOnly when on a genre category
+    if (activeSortBy && activeSortBy.startsWith('genre:') && watchedOnly) {
+        params.set('watchedOnly', '1');
+    }
+
     try {
-        const response = await fetch(`/catalog/data?${params.toString()}`);
+        // If watchedOnly for genre, ensure watched sets are loaded before fetching
+        if (activeSortBy && activeSortBy.startsWith('genre:') && watchedOnly) {
+            const { selectedProfileId } = profileData;
+            const genre = activeSortBy.replace('genre:', '');
+            await loadWatchedSetsForGenre(selectedProfileId, genre);
+        }
+        if (activeSortBy && activeSortBy.startsWith('genre:')) {
+            params.set('_', String(Date.now()));
+            if (watchedOnly) params.set('debug', '1');
+        }
+        const url = `/catalog/data?${params.toString()}`;
+        const response = await fetch(url);
         
         // Check if this request is still valid BEFORE processing response
         if (requestId !== currentRequestId) {
@@ -658,8 +755,21 @@ async function fetchCatalogPage() {
             return;
         }
         
-        const catalogItems = Array.isArray(data.catalog) ? data.catalog : [];
-        appendVideos(catalogItems);
+    let originalItems = Array.isArray(data.catalog) ? data.catalog : [];
+    const originalCount = originalItems.length;
+    let catalogItems = applyWatchedFilterIfNeeded(originalItems, profileData.selectedProfileId, activeSortBy);
+    appendVideos(catalogItems);
+    // Watched-only empty state message
+    if (activeSortBy && activeSortBy.startsWith('genre:') && watchedOnly) {
+        const genreName = activeSortBy.replace('genre:', '');
+        if (isFirstBatch && catalogItems.length === 0) {
+            try { window.showWatchedEmptyMessage ? window.showWatchedEmptyMessage(genreName) : null; } catch (_) {}
+        } else if (catalogItems.length > 0) {
+            try { window.hideWatchedEmptyMessage ? window.hideWatchedEmptyMessage() : null; } catch (_) {}
+        }
+    } else {
+        try { window.hideWatchedEmptyMessage ? window.hideWatchedEmptyMessage() : null; } catch (_) {}
+    }
 
         // Clear Most Popular section if we're searching (it will be recreated below if there are matching results)
         if (activeSearchTerm && activeSearchTerm.trim()) {
@@ -720,9 +830,11 @@ async function fetchCatalogPage() {
             hideNoResultsMessage();
         }
 
-        nextOffset += catalogItems.length;
-        const totalFromResponse = Number(data.total);
-        totalItems = Number.isFinite(totalFromResponse) ? totalFromResponse : totalItems;
+    // Advance pagination based on server-returned count to avoid infinite loop when client filters everything out
+    const totalFromResponse = Number(data.total);
+    const respOffset = Number.isFinite(Number(data.offset)) ? Number(data.offset) : expectedOffset;
+    nextOffset = Math.max(nextOffset, respOffset + originalCount);
+    totalItems = Number.isFinite(totalFromResponse) ? totalFromResponse : totalItems;
         isFirstBatch = false;
         isLoading = false;
 
@@ -818,9 +930,28 @@ function resetFeedForSort() {
     }
 }
 
-async function setSortBy(sortBy) {
-    if (activeSortBy !== sortBy) {
+async function setSortBy(sortBy, forceReload = false) {
+    if (activeSortBy !== sortBy || forceReload) {
+        const previousSort = activeSortBy;
         activeSortBy = sortBy;
+        // Reset watched-only toggle when switching to a different genre
+        if (watchedToggle) {
+            const wasGenre = previousSort.startsWith('genre:');
+            const isGenre = activeSortBy.startsWith('genre:');
+            const prevGenreName = wasGenre ? previousSort.slice(6) : null;
+            const newGenreName = isGenre ? activeSortBy.slice(6) : null;
+            if (!isGenre) {
+                // Leaving genre view -> clear
+                watchedOnly = false;
+                watchedToggle.checked = false;
+                try { hideWatchedEmptyMessage(); } catch (_) {}
+            } else if (wasGenre && prevGenreName !== newGenreName) {
+                // Switching between different genres
+                watchedOnly = false;
+                watchedToggle.checked = false;
+                try { hideWatchedEmptyMessage(); } catch (_) {}
+            }
+        }
         
         // Update page header based on category
         const pageHeader = document.getElementById('pageHeader');
@@ -829,9 +960,13 @@ async function setSortBy(sortBy) {
             pageHeader.style.display = 'block';
             if (sortBy === 'home') {
                 pageHeader.textContent = 'Continue Watching';
+                // Hide watched-only toggle on home
+                if (watchedToggleContainer) watchedToggleContainer.style.display = 'none';
             } else if (sortBy.startsWith('genre:')) {
                 const genre = sortBy.replace('genre:', '');
                 pageHeader.textContent = genre;
+                // Show watched-only toggle on genre
+                if (watchedToggleContainer) watchedToggleContainer.style.display = '';
             }
         }
         
@@ -879,7 +1014,23 @@ async function setSortBy(sortBy) {
             // Add category identifier to track request origin
             params.set('requestCategory', activeSortBy);
 
-            const response = await fetch(`/catalog/data?${params.toString()}`);
+            // Add watchedOnly when on a genre category
+            const isGenre = activeSortBy && activeSortBy.startsWith('genre:');
+            const genreName = isGenre ? activeSortBy.replace('genre:', '') : null;
+            if (isGenre && watchedOnly) {
+                // Preload watched sets before issuing catalog request to ensure cache.loaded is true
+                try {
+                    await loadWatchedSetsForGenre(profileData.selectedProfileId, genreName);
+                } catch (_) {}
+                params.set('watchedOnly', '1');
+            }
+
+            if (isGenre) {
+                params.set('_', String(Date.now()));
+                if (watchedOnly) params.set('debug', '1');
+            }
+            const url = `/catalog/data?${params.toString()}`;
+            const response = await fetch(url);
             if (response.ok) {
                 const data = await response.json();
                 
@@ -891,11 +1042,23 @@ async function setSortBy(sortBy) {
                 // Atomically replace content to prevent stutter
                 feed.innerHTML = '';
                 updateLikedIds(data.likedContent);
-                appendVideos(data.catalog || []);
+                let originalItems = Array.isArray(data.catalog) ? data.catalog : [];
+                const originalCount = originalItems.length;
+                let catalogItems = applyWatchedFilterIfNeeded(originalItems, profileData.selectedProfileId, activeSortBy);
+                appendVideos(catalogItems);
+                if (isGenre && watchedOnly) {
+                    if (catalogItems.length === 0) {
+                        try { showWatchedEmptyMessage(genreName); } catch (_) {}
+                    } else {
+                        try { hideWatchedEmptyMessage(); } catch (_) {}
+                    }
+                } else {
+                    try { hideWatchedEmptyMessage(); } catch (_) {}
+                }
 
                 // Reset pagination state for new sort
-                const itemsLoaded = (data.catalog || []).length;
-                nextOffset = itemsLoaded;
+                // Use original count to advance offset even if client filtered everything out
+                nextOffset = originalCount;
                 const totalFromResponse = Number(data.total);
                 totalItems = Number.isFinite(totalFromResponse) ? totalFromResponse : Infinity;
                 isFirstBatch = false;
@@ -924,6 +1087,25 @@ async function setSortBy(sortBy) {
 
 // Make setSortBy available globally for genre title clicks
 window.setSortBy = setSortBy;
+
+// Initialize watched-only toggle events
+document.addEventListener('DOMContentLoaded', () => {
+    if (watchedToggle) {
+        watchedToggle.addEventListener('change', () => {
+            watchedOnly = watchedToggle.checked;
+            if (!watchedOnly) {
+                try { hideWatchedEmptyMessage(); } catch (_) {}
+            }
+            // When toggling inside a genre, clear and immediately refetch with current category
+            if (activeSortBy && activeSortBy.startsWith('genre:')) {
+                // Reset feed and re-observe sentinel for proper infinite scroll
+                resetFeedForSort();
+                // Force reload current category so server applies watchedOnly filter
+                setSortBy(activeSortBy, true);
+            }
+        });
+    }
+});
 
 function openSearch() {
     if (!searchInput) return;
@@ -1026,6 +1208,43 @@ function hideNoResultsMessage() {
         }
     } catch (error) {
         console.error('Error hiding no-results message:', error);
+    }
+}
+
+// Watched-only empty state helpers
+function showWatchedEmptyMessage(genre) {
+    try {
+        hideWatchedEmptyMessage();
+        const mainElement = document.querySelector('main.container-xxl') || document.querySelector('main');
+        if (!mainElement) return;
+        const headerElement = mainElement.querySelector('header');
+        const messageDiv = document.createElement('div');
+        messageDiv.id = 'watched-empty-message';
+        messageDiv.className = 'text-center mt-5 mb-5';
+        const genreText = genre ? ` in ${genre}` : '';
+        messageDiv.innerHTML = `
+            <div class="text-white-50">
+                <i class=\"bi bi-eye-slash mb-3\" style=\"font-size: 3rem;\"></i>
+                <h3 class=\"h5 mb-2\">No watched items${genreText} yet</h3>
+                <p class=\"mb-0\">Turn off &quot;Watched only&quot; to browse all titles</p>
+            </div>
+        `;
+        if (headerElement) {
+            headerElement.insertAdjacentElement('afterend', messageDiv);
+        } else {
+            mainElement.prepend(messageDiv);
+        }
+    } catch (error) {
+        console.error('Error showing watched empty message:', error);
+    }
+}
+
+function hideWatchedEmptyMessage() {
+    try {
+        const existing = document.getElementById('watched-empty-message');
+        if (existing && existing.parentNode) existing.remove();
+    } catch (error) {
+        console.error('Error hiding watched empty message:', error);
     }
 }
 
