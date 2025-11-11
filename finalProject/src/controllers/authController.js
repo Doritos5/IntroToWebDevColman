@@ -1,7 +1,7 @@
 const crypto = require('crypto')
-const { logError } = require('../middleware/logger');
+const { logInfo, logError } = require('../middleware/logger');
 const bcrypt = require('bcrypt')
-const{
+const {
     createUser,
     getUserByEmail,
 } = require('../models/userModel');
@@ -16,21 +16,24 @@ function generateId() {
     return crypto.randomUUID ? crypto.randomUUID() : `user-${Date.now()}`;
 }
 
-async function login (req, res) {
+async function login(req, res) {
     const { email, password } = req.body || {};
     console.log(`[Auth] Login attempt for ${email || 'unknown email'}`);
     if (!email || !password) {
         console.log('[Auth] Login failed - missing credentials');
+        logInfo('[Auth] Login failed - missing credentials', { email });
         return res.status(400).json({ message: 'Email and password are required.' });
     }
     try {
         const userRaw = await getUserByEmail(email); // (hydrate: false הוא ברירת מחדל)
         if (!userRaw) {
-            return res.status(401).json({message: 'Invalid email or password.'});
+            logInfo('[Auth] Login failed - user not found', { email });
+            return res.status(401).json({ message: 'Invalid email or password.' });
         }
         const ok = await bcrypt.compare(password, userRaw.password);
         if (!ok) {
-            return res.status(401).json({message: 'Invalid email or password.'});
+            logInfo('[Auth] Login failed - wrong password', { email });
+            return res.status(401).json({ message: 'Invalid email or password.' });
         }
         req.session.user = {
             id: userRaw.id,
@@ -39,6 +42,7 @@ async function login (req, res) {
             role: userRaw.role || 'user',
         };
         const userForClient = sanitizeUser(await getUserByEmail(email, { hydrate: true }));
+        logInfo('[Auth] Login successful', { email });
         return res.status(200).json({ message: 'Login successful.', user: userForClient });
     } catch (error) {
         logError('[Auth] Login error', error, { email });
@@ -47,10 +51,12 @@ async function login (req, res) {
     }
 }
 
-async function logout (req, res) {
+async function logout(req, res) {
     const wantsJson = req.headers['x-requested-with'] === 'XMLHttpRequest';
+    const userEmail = req.session?.user?.email;
     req.session.destroy(() => {
         res.clearCookie('connect.sid');
+        logInfo('[Auth] Logout', { email: userEmail });
         if (wantsJson) {
             return res.status(200).json({ message: 'Logged out' });
         }
@@ -58,7 +64,7 @@ async function logout (req, res) {
     });
 }
 
-async function register (req, res) {
+async function register(req, res) {
     const { email, username, password } = req.body || {};
 
     if (!email || !password || !username) {
@@ -85,6 +91,7 @@ async function register (req, res) {
         const existingUser = await getUserByEmail(email);
         if (existingUser) {
             console.log(`[Auth] Registration failed - email already in use: ${email}`);
+            logInfo('[Auth] Registration failed - email already in use', { email });
             return res.status(409).json({ message: 'An account with this email already exists.' });
         }
 
@@ -108,6 +115,11 @@ async function register (req, res) {
             username: newUserObj.username,
             role: newUserObj.role || 'user',
         };
+        logInfo('[Auth] Registration successful', {
+            email: newUserObj.email,
+            username: newUserObj.username,
+            userId: newUserObj.id
+        });
         return res.status(201).json({ message: 'Registration successful.', user: sanitizeUser(newUserObj) });
     } catch (error) {
         logError('[Auth] Registration error', error, { email, username });

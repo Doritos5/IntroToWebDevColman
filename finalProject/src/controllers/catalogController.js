@@ -3,6 +3,7 @@ const path = require('path');
 const catalogModel = require('../models/catalogModel');
 const userModel = require('../models/userModel');
 const viewingSessionModel = require('../models/viewingSessionModel');
+const { logInfo, logError } = require('../middleware/logger');
 
 const INITIAL_PAGE_SIZE = 10;
 const DEFAULT_PAGE_SIZE = process.env.ITEMS_PER_PAGE || 50;
@@ -62,10 +63,15 @@ async function renderCatalogPage(req, res, next) {
         }
 
         const videosPerPage = getConfiguredPageSize();
-        
+
         // Get all available genres for dynamic navigation
         const availableGenres = await catalogModel.getAllGenres();
-
+        logInfo('[Catalog] Render catalog page', {
+            userEmail,
+            profileId,
+            profileName,
+            videosPerPage
+        });
         res.render('catalog', {
             catalogFeed: '',
             profileName,
@@ -75,6 +81,7 @@ async function renderCatalogPage(req, res, next) {
             cacheBuster: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         });
     } catch (error) {
+        logError('[Catalog] Error rendering catalog page', error, { userEmail: req.session.user?.email });
         next(error);
     }
 }
@@ -86,6 +93,7 @@ async function renderVideoDetailPage(req, res, next) {
         const userEmail = req.session.user.email;
         const video = await catalogModel.findVideoById(videoId);
         if (!video) {
+            logInfo('[Catalog] Video not found for details', { videoId });
             return res.status(404).send('Video not found.');
         }
         const user = await userModel.getUserByEmail(userEmail, { hydrate: true });
@@ -105,6 +113,12 @@ async function renderVideoDetailPage(req, res, next) {
             excludeId: video.id,
             limit: 8,
         });
+        logInfo('[Catalog] Render video detail', {
+            videoId,
+            profileId,
+            profileName,
+            isLiked
+        });
         res.render('item', {
             video,
             profileName,
@@ -113,6 +127,7 @@ async function renderVideoDetailPage(req, res, next) {
             recommendations,
         });
     } catch (error) {
+        logError('[Catalog] Error rendering video detail', error, { videoId: req.params.videoId, profileId: req.query.profileId || '' });
         next(error);
     }
 }
@@ -121,15 +136,15 @@ async function getCatalogByQuery(req, res, next) {
     try {
         const query = req.params.query;
         const searchTerm = query ? query.trim() : '';
-
+        logInfo('[Catalog] Search catalog', { searchTerm });
         const feedHtml = await catalogModel.generateCatalogFeed(
             searchTerm
                 ? (item) => item.title.toLowerCase().includes(searchTerm.toLowerCase())
                 : null
         );
-
         return res.type('html').send(feedHtml);
     } catch (error) {
+        logError('[Catalog] Error in getCatalogByQuery', error, { query: req.params.query });
         next(error);
     }
 }
@@ -155,7 +170,7 @@ async function getCatalogData(req, res) {
         let catalog;
         let genreSections = [];
         let mostPopular = null;
-        
+
         if (sortBy === 'home' && profileId) {
             // Continue Watching: Get videos with viewing progress for this profile
             catalog = await catalogModel.getContinueWatching({
@@ -164,12 +179,12 @@ async function getCatalogData(req, res) {
                 limit: videosPerPage,
                 search,
             });
-            
+
             // Get Most Popular section (max 10 items)
             if (!hasOffset || normalizedOffset === 0) {
                 mostPopular = await catalogModel.getMostPopular(10);
             }
-            
+
             // Get genre sections for home page
             genreSections = await catalogModel.getVideosByGenre(videosPerPage || DEFAULT_PAGE_SIZE);
         } else if (sortBy.startsWith('genre:')) {
@@ -195,7 +210,16 @@ async function getCatalogData(req, res) {
         res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.set('Pragma', 'no-cache');
         res.set('Expires', '0');
-        
+
+        logInfo('[Catalog] Get catalog data', {
+            userEmail,
+            profileId,
+            sortBy,
+            page,
+            limit: videosPerPage,
+            requestCategory
+        });
+
         res.json({
             catalog: catalog.items,
             likedContent,
@@ -211,6 +235,11 @@ async function getCatalogData(req, res) {
         });
     } catch (error) {
         console.error('Error fetching catalog data:', error);
+        logError('[Catalog] Error fetching catalog data', error, {
+            userEmail: req.session.user?.email,
+            profileId: req.query.profileId,
+            sortBy: req.query.sortBy
+        });
         res.status(500).json({ message: 'Server error' });
     }
 }
@@ -221,6 +250,7 @@ async function streamVideo(req, res) {
     try {
         const video = await catalogModel.findVideoById(videoId);
         if (!video) {
+            logInfo('[Catalog] Stream failed - video not found', { videoId });
             return res.status(404).json({ message: 'Video not found.' });
         }
 
@@ -232,6 +262,7 @@ async function streamVideo(req, res) {
                 ? 'video/ogg'
                 : 'video/mp4';
         if (!fs.existsSync(videoPath)) {
+            logInfo('[Catalog] Stream failed - file missing', { videoId, videoPath });
             return res.status(404).json({ message: 'Video file missing on server.' });
         }
 
@@ -263,9 +294,17 @@ async function streamVideo(req, res) {
             'Content-Type': mimeType,
         });
 
+        logInfo('[Catalog] Stream video', {
+            videoId,
+            withRange: !!range,
+            start,
+            end
+        });
+
         stream.pipe(res);
     } catch (error) {
         console.error('Error streaming video:', error);
+        logError('[Catalog] Error streaming video', error, { videoId });
         res.status(500).json({ message: 'Error streaming video.' });
     }
 }
@@ -275,6 +314,7 @@ async function getVideoProgress(req, res) {
     const { profileId } = req.query;
 
     if (!profileId) {
+        logInfo('[Progress] Get progress failed - missing profileId', { videoId });
         return res.status(400).json({ message: 'Profile ID is required.' });
     }
 
@@ -288,8 +328,15 @@ async function getVideoProgress(req, res) {
         });
 
         if (!progress) {
+            logInfo('[Progress] No progress for video', { videoId, profileId });
             return res.json({ positionSeconds: 0, durationSeconds: 0 });
         }
+
+        logInfo('[Progress] Get video progress', {
+            videoId,
+            profileId,
+            hasProgress: true
+        });
 
         return res.json({
             positionSeconds: progress.positionSeconds || 0,
@@ -298,6 +345,7 @@ async function getVideoProgress(req, res) {
         });
     } catch (error) {
         console.error('Error retrieving video progress:', error);
+        logError('[Progress] Error retrieving video progress', error, { videoId, profileId });
         return res.status(500).json({ message: 'Server error.' });
     }
 }
@@ -308,12 +356,19 @@ async function getNextVideo(req, res) {
     try {
         const nextVideo = await catalogModel.findNextVideo(videoId);
         if (!nextVideo) {
+            logInfo('[Catalog] Next video not found', { videoId });
             return res.status(404).json({ message: 'Next video not found.' });
         }
+
+        logInfo('[Catalog] Get next video', {
+            videoId,
+            nextVideoId: nextVideo.id
+        });
 
         return res.json({ video: nextVideo });
     } catch (error) {
         console.error('Error fetching next video:', error);
+        logError('[Catalog] Error fetching next video', error, { videoId });
         return res.status(500).json({ message: 'Server error.' });
     }
 }
@@ -324,13 +379,16 @@ async function listEpisodes(req, res) {
     try {
         if (seriesId) {
             const result = await catalogModel.listEpisodesBySeries(seriesId, { page, limit });
+            logInfo('[Catalog] List episodes by series', { seriesId, page, limit });
             return res.json(result);
         }
 
         const result = await catalogModel.listAllVideos({ page, limit });
+        logInfo('[Catalog] List all videos (episodes)', { page, limit });
         return res.json(result);
     } catch (error) {
         console.error('Error fetching episodes list:', error);
+        logError('[Catalog] Error fetching episodes list', error, { seriesId, page, limit });
         return res.status(500).json({ message: 'Server error.' });
     }
 }
@@ -340,6 +398,7 @@ async function updateVideoProgress(req, res) {
     const { profileId, positionSeconds, durationSeconds } = req.body;
 
     if (!profileId) {
+        logInfo('[Progress] Update failed - missing profileId', { videoId });
         return res.status(400).json({ message: 'Profile ID is required.' });
     }
 
@@ -353,12 +412,22 @@ async function updateVideoProgress(req, res) {
         });
 
         if (!session) {
+            logInfo('[Progress] Update failed - invalid video identifier', { videoId, profileId });
             return res.status(400).json({ message: 'Invalid video identifier.' });
         }
-
+        logInfo('[Progress] Progress saved', {
+            videoId,
+            profileId,
+            positionSeconds,
+            durationSeconds
+        });
         return res.json({ message: 'Progress saved.' });
     } catch (error) {
         console.error('Error updating video progress:', error);
+        logError('[Progress] Error updating video progress', error, {
+            videoId,
+            profileId
+        });
         return res.status(500).json({ message: 'Server error.' });
     }
 }
@@ -366,9 +435,14 @@ async function updateVideoProgress(req, res) {
 async function adminCreateVideo(req, res) {
     try {
         const created = await catalogModel.createVideo(req.body);
+        logInfo('[Admin] Video created', {
+            videoId: created.id,
+            title: created.title
+        });
         return res.status(201).json(created);
     } catch (error) {
         console.error('[adminCreateVideo] error:', error);
+        logError('[Admin] Error creating video', error);
         return res.status(500).json({ message: 'Server error' });
     }
 }
@@ -377,10 +451,15 @@ async function adminUpdateVideo(req, res) {
     try {
         const { videoId } = req.params;
         const updated = await catalogModel.updateVideoById(videoId, req.body);
-        if (!updated) return res.status(404).json({ message: 'Video not found' });
+        if (!updated){
+            logInfo('[Admin] Update failed - video not found', { videoId });
+            return res.status(404).json({ message: 'Video not found' });}
+
+        logInfo('[Admin] Video updated', { videoId });    
         return res.json(updated);
     } catch (error) {
         console.error('[adminUpdateVideo] error:', error);
+        logError('[Admin] Error updating video', error, { videoId });
         return res.status(500).json({ message: 'Server error' });
     }
 }
@@ -389,10 +468,14 @@ async function adminDeleteVideo(req, res) {
     try {
         const { videoId } = req.params;
         const ok = await catalogModel.deleteVideoById(videoId);
-        if (!ok) return res.status(404).json({ message: 'Video not found' });
+        if (!ok){
+            logInfo('[Admin] Delete failed - video not found', { videoId });
+             return res.status(404).json({ message: 'Video not found' });}
+        logInfo('[Admin] Video deleted', { videoId });
         return res.status(204).end();
     } catch (error) {
         console.error('[adminDeleteVideo] error:', error);
+        logError('[Admin] Error deleting video', error, { videoId });
         return res.status(500).json({ message: 'Server error' });
     }
 }

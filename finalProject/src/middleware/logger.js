@@ -33,4 +33,18 @@ const logError = (msg, error, meta = {}) => {
   });
 };
 
-module.exports = { logger, logError };
+const logInfo = (msg, meta = {}) => {
+  const timestamp = new Date().toISOString();
+
+  console.log('[INFO]', `[${timestamp}]`, msg, meta);
+
+  Log.create({
+    level: 'info',
+    message: msg,
+    meta: { ...meta, timestamp }
+  }).catch((err) => {
+    console.error('[Logger] Failed to save info log', err.message);
+  });
+};
+
+module.exports = { logger, logInfo, logError };
