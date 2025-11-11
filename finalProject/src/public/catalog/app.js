@@ -28,6 +28,9 @@ const MINIMUM_LOADER_DURATION_MS = 2000;
 const feedLoader = document.getElementById('feedLoader');
 const watchedToggle = document.getElementById('watchedOnlyToggle');
 const watchedToggleContainer = document.getElementById('watchedToggleContainer');
+const headerActions = document.getElementById('headerActions');
+const genreSortSelect = document.getElementById('genreSortSelect');
+const genreSortContainer = document.getElementById('genreSortContainer');
 
 if (feedLoader) {
     feedLoader.classList.remove('is-visible');
@@ -58,6 +61,7 @@ let currentSeriesId = null;
 let loadedSeriesId = null;
 let seriesEpisodesCache = new Map();
 let watchedOnly = false; // applies only to genre categories
+let genreSort = 'name'; // 'name' | 'popularity' | 'rating' for genre categories
 let watchedFilterCache = {
     profileId: null,
     genre: null,
@@ -81,6 +85,40 @@ function normalizeId(val) {
         }
     }
     return null;
+}
+
+// Keep header actions visibility in sync with category
+function updateHeaderActionsVisibility() {
+    const isHome = !activeSortBy || activeSortBy === 'home';
+    const isGenre = !!(activeSortBy && activeSortBy.startsWith('genre:'));
+    const pageHeader = document.getElementById('pageHeader');
+    if (isHome) {
+        if (pageHeader) {
+            // Always reset header text; visibility decided after fetching home data
+            pageHeader.textContent = 'Continue Watching';
+        }
+        if (watchedToggleContainer) watchedToggleContainer.style.display = 'none';
+        if (headerActions) { headerActions.style.display = 'none'; headerActions.classList.remove('d-flex'); }
+        if (genreSortSelect) genreSortSelect.disabled = true;
+        if (genreSortContainer) { genreSortContainer.style.display = 'none'; genreSortContainer.classList.remove('d-flex'); }
+        return;
+    }
+    if (isGenre) {
+        if (pageHeader) {
+            pageHeader.textContent = '';
+            pageHeader.style.display = 'none';
+        }
+        if (headerActions) { headerActions.style.display = ''; headerActions.classList.add('d-flex'); }
+        if (watchedToggleContainer) watchedToggleContainer.style.display = '';
+        if (genreSortSelect) genreSortSelect.disabled = false;
+        if (genreSortContainer) { genreSortContainer.style.display = ''; genreSortContainer.classList.add('d-flex'); }
+        return;
+    }
+    // Fallback: hide actions
+    if (headerActions) { headerActions.style.display = 'none'; headerActions.classList.remove('d-flex'); }
+    if (watchedToggleContainer) watchedToggleContainer.style.display = 'none';
+    if (genreSortContainer) { genreSortContainer.style.display = 'none'; genreSortContainer.classList.remove('d-flex'); }
+    if (genreSortSelect) genreSortSelect.disabled = true;
 }
 
 async function loadWatchedSetsForGenre(profileId, genre) {
@@ -254,6 +292,50 @@ function appendVideos(videos) {
         fragment.appendChild(card);
     });
     feed.appendChild(fragment);
+}
+
+function sortGenreItems(items, mode) {
+    if (!Array.isArray(items)) return [];
+    const safeMode = mode || 'name';
+    // Normalize title (prefer seriesTitle when present) for name sort
+    const getTitle = (v) => (v.seriesTitle && typeof v.seriesTitle === 'string' && v.seriesTitle.trim().length > 0)
+        ? v.seriesTitle.trim()
+        : (v.title || '').trim();
+    if (safeMode === 'popularity') {
+        return [...items].sort((a, b) => {
+            const la = Number(a.likes) || 0;
+            const lb = Number(b.likes) || 0;
+            if (lb !== la) return lb - la; // desc likes
+            const ra = Number(a.rating) || 0;
+            const rb = Number(b.rating) || 0;
+            if (rb !== ra) return rb - ra; // desc rating
+            return getTitle(a).localeCompare(getTitle(b), undefined, { sensitivity: 'accent', numeric: true });
+        });
+    }
+    if (safeMode === 'rating') {
+        return [...items].sort((a, b) => {
+            const ra = Number(a.rating) || 0;
+            const rb = Number(b.rating) || 0;
+            if (rb !== ra) return rb - ra; // desc rating
+            const la = Number(a.likes) || 0;
+            const lb = Number(b.likes) || 0;
+            if (lb !== la) return lb - la; // desc likes tie-break
+            return getTitle(a).localeCompare(getTitle(b), undefined, { sensitivity: 'accent', numeric: true });
+        });
+    }
+    return [...items].sort((a, b) => {
+        const ta = getTitle(a).toLowerCase();
+        const tb = getTitle(b).toLowerCase();
+        if (ta < tb) return -1;
+        if (ta > tb) return 1;
+        const la = Number(a.likes) || 0;
+        const lb = Number(b.likes) || 0;
+        if (lb !== la) return lb - la; // keep higher liked first on identical names
+        const ra = Number(a.rating) || 0;
+        const rb = Number(b.rating) || 0;
+        if (rb !== ra) return rb - ra;
+        return 0;
+    });
 }
 
 function setLoadingState(active) {
@@ -506,7 +588,7 @@ async function goToNextEpisode() {
             throw new Error('No next episode available');
         }
 
-        const data = await response.json();
+    const data = await response.json();
         if (data?.video) {
             await openVideoModal(data.video);
             return;
@@ -658,6 +740,8 @@ async function fetchCatalogPage() {
     }
     
     isLoading = true;
+    // Enforce visibility rules every request start to avoid stray UI
+    try { updateHeaderActionsVisibility(); } catch (_) {}
     
     // Don't show loading elements during search
     if (!activeSearchTerm || !activeSearchTerm.trim()) {
@@ -689,6 +773,10 @@ async function fetchCatalogPage() {
     if (activeSortBy && activeSortBy.startsWith('genre:') && watchedOnly) {
         params.set('watchedOnly', '1');
     }
+    // Add genre sort when on a genre category
+    if (activeSortBy && activeSortBy.startsWith('genre:')) {
+        params.set('genreSort', genreSort);
+    }
 
     try {
         // If watchedOnly for genre, ensure watched sets are loaded before fetching
@@ -699,7 +787,6 @@ async function fetchCatalogPage() {
         }
         if (activeSortBy && activeSortBy.startsWith('genre:')) {
             params.set('_', String(Date.now()));
-            if (watchedOnly) params.set('debug', '1');
         }
         const url = `/catalog/data?${params.toString()}`;
         const response = await fetch(url);
@@ -742,7 +829,8 @@ async function fetchCatalogPage() {
             return;
         }
         
-        updateLikedIds(data.likedContent);
+    updateLikedIds(data.likedContent);
+    try { updateHeaderActionsVisibility(); } catch (_) {}
         const waitTime = Math.max(0, MINIMUM_LOADER_DURATION_MS);
         if (!isFirstBatch && waitTime > 0) {
             await loadingTime(waitTime);
@@ -758,6 +846,9 @@ async function fetchCatalogPage() {
     let originalItems = Array.isArray(data.catalog) ? data.catalog : [];
     const originalCount = originalItems.length;
     let catalogItems = applyWatchedFilterIfNeeded(originalItems, profileData.selectedProfileId, activeSortBy);
+    if (activeSortBy && activeSortBy.startsWith('genre:')) {
+        catalogItems = sortGenreItems(catalogItems, genreSort);
+    }
     appendVideos(catalogItems);
     // Watched-only empty state message
     if (activeSortBy && activeSortBy.startsWith('genre:') && watchedOnly) {
@@ -827,8 +918,8 @@ async function fetchCatalogPage() {
                 // Outside of search: show header only if there are items in Continue Watching
                 const pageHeader = document.getElementById('pageHeader');
                 if (pageHeader) {
-                    const hasItems = (catalogItems.length > 0) || (feed && feed.children && feed.children.length > 0);
-                    pageHeader.style.display = hasItems ? 'block' : 'none';
+                    const continueWatchingHasItems = catalogItems.length > 0;
+                    pageHeader.style.display = continueWatchingHasItems ? 'block' : 'none';
                 }
             } else {
                 window.mainResultsCount = catalogItems.length;
@@ -951,34 +1042,58 @@ async function setSortBy(sortBy, forceReload = false) {
                 watchedOnly = false;
                 watchedToggle.checked = false;
                 try { hideWatchedEmptyMessage(); } catch (_) {}
+                // Hide genre sort UI when leaving genre
+                if (genreSortContainer) genreSortContainer.style.display = 'none';
+                // Reset dropdown label
+                try {
+                    const sortLabel = document.getElementById('genreSortLabel');
+                    const sortDropdown = document.getElementById('genreSortDropdown');
+                    if (sortLabel) sortLabel.textContent = 'Name';
+                    if (sortDropdown) {
+                        sortDropdown.querySelectorAll('.dropdown-item').forEach((i) => {
+                            i.classList.toggle('active', i.getAttribute('data-value') === 'name');
+                        });
+                    }
+                } catch (_) {}
             } else if (wasGenre && prevGenreName !== newGenreName) {
                 // Switching between different genres
                 watchedOnly = false;
                 watchedToggle.checked = false;
                 try { hideWatchedEmptyMessage(); } catch (_) {}
+                // Reset genre sort to default when entering a new genre
+                genreSort = 'name';
+                if (genreSortSelect) genreSortSelect.value = 'name';
+                if (genreSortContainer) genreSortContainer.style.display = '';
+                try {
+                    const sortLabel = document.getElementById('genreSortLabel');
+                    const sortDropdown = document.getElementById('genreSortDropdown');
+                    if (sortLabel) sortLabel.textContent = 'Name';
+                    if (sortDropdown) {
+                        sortDropdown.querySelectorAll('.dropdown-item').forEach((i) => {
+                            i.classList.toggle('active', i.getAttribute('data-value') === 'name');
+                        });
+                    }
+                } catch (_) {}
+            } else if (!wasGenre && isGenre) {
+                // Entering genre from home or other category: reset to default and show
+                genreSort = 'name';
+                if (genreSortSelect) genreSortSelect.value = 'name';
+                if (genreSortContainer) genreSortContainer.style.display = '';
+                try {
+                    const sortLabel = document.getElementById('genreSortLabel');
+                    const sortDropdown = document.getElementById('genreSortDropdown');
+                    if (sortLabel) sortLabel.textContent = 'Name';
+                    if (sortDropdown) {
+                        sortDropdown.querySelectorAll('.dropdown-item').forEach((i) => {
+                            i.classList.toggle('active', i.getAttribute('data-value') === 'name');
+                        });
+                    }
+                } catch (_) {}
             }
         }
         
-        // Update header area based on category
-        const pageHeader = document.getElementById('pageHeader');
-        if (pageHeader) {
-            if (sortBy === 'home') {
-                // Set title but hide until we confirm items exist
-                pageHeader.textContent = 'Continue Watching';
-                pageHeader.style.display = 'none';
-                // Hide watched-only toggle on home
-                if (watchedToggleContainer) watchedToggleContainer.style.display = 'none';
-            } else if (sortBy.startsWith('genre:')) {
-                // For genre categories, hide the section name
-                pageHeader.textContent = '';
-                pageHeader.style.display = 'none';
-                // Show watched-only toggle on genre
-                if (watchedToggleContainer) watchedToggleContainer.style.display = '';
-            } else {
-                // Default fallback: show header
-                pageHeader.style.display = 'block';
-            }
-        }
+        // Single-source visibility update
+        updateHeaderActionsVisibility();
         
         // Close search when switching categories
         if (activeSearchTerm || (searchInput && searchInput.classList.contains('active'))) {
@@ -1034,58 +1149,48 @@ async function setSortBy(sortBy, forceReload = false) {
                 } catch (_) {}
                 params.set('watchedOnly', '1');
             }
+            // Add genre sort when on a genre category
+            if (isGenre) {
+                params.set('genreSort', genreSort);
+            }
 
             if (isGenre) {
                 params.set('_', String(Date.now()));
-                if (watchedOnly) params.set('debug', '1');
             }
             const url = `/catalog/data?${params.toString()}`;
             const response = await fetch(url);
-            if (response.ok) {
-                const data = await response.json();
-                
-                // Check if response matches current category (drop stale responses)
-                if (data.requestCategory && data.requestCategory !== activeSortBy) {
-                    return;
-                }
-                
-                // Atomically replace content to prevent stutter
-                feed.innerHTML = '';
-                updateLikedIds(data.likedContent);
-                let originalItems = Array.isArray(data.catalog) ? data.catalog : [];
-                const originalCount = originalItems.length;
-                let catalogItems = applyWatchedFilterIfNeeded(originalItems, profileData.selectedProfileId, activeSortBy);
-                appendVideos(catalogItems);
-                if (isGenre && watchedOnly) {
-                    if (catalogItems.length === 0) {
-                        try { showWatchedEmptyMessage(genreName); } catch (_) {}
-                    } else {
-                        try { hideWatchedEmptyMessage(); } catch (_) {}
-                    }
-                } else {
-                    try { hideWatchedEmptyMessage(); } catch (_) {}
-                }
+            if (!response.ok) throw new Error('Failed to load catalog with new sort');
+            const data = await response.json();
+            if (data.requestCategory && data.requestCategory !== activeSortBy) return;
 
-                // Reset pagination state for new sort
-                // Use original count to advance offset even if client filtered everything out
-                nextOffset = originalCount;
-                const totalFromResponse = Number(data.total);
-                totalItems = Number.isFinite(totalFromResponse) ? totalFromResponse : Infinity;
-                isFirstBatch = false;
-                
-                // Disable infinite scroll if we've loaded all available items
-                if (nextOffset >= totalItems) {
-                    sentinel?.classList.add('hidden');
-                    if (observer && sentinel) {
-                        observer.unobserve(sentinel);
-                    }
-                } else {
-                    sentinel?.classList.remove('hidden');
-                }
-            } else {
-                throw new Error('Failed to load catalog with new sort');
+            // Replace content atomically
+            feed.innerHTML = '';
+            updateLikedIds(data.likedContent);
+            const originalItems = Array.isArray(data.catalog) ? data.catalog : [];
+            const originalCount = originalItems.length;
+            let catalogItems = applyWatchedFilterIfNeeded(originalItems, profileData.selectedProfileId, activeSortBy);
+            if (isGenre) catalogItems = sortGenreItems(catalogItems, genreSort);
+            appendVideos(catalogItems);
+
+            if (isGenre && watchedOnly) {
+                if (catalogItems.length === 0) { try { showWatchedEmptyMessage(genreName); } catch (_) {} }
+                else { try { hideWatchedEmptyMessage(); } catch (_) {} }
+            } else { try { hideWatchedEmptyMessage(); } catch (_) {} }
+
+            if (!isGenre) {
+                const pageHeader = document.getElementById('pageHeader');
+                if (pageHeader) pageHeader.style.display = catalogItems.length > 0 ? 'block' : 'none';
+                window.continueWatchingResultsCount = catalogItems.length;
             }
-            
+
+            nextOffset = originalCount;
+            const totalFromResponse = Number(data.total);
+            totalItems = Number.isFinite(totalFromResponse) ? totalFromResponse : Infinity;
+            isFirstBatch = false;
+            if (nextOffset >= totalItems) {
+                sentinel?.classList.add('hidden');
+                if (observer && sentinel) observer.unobserve(sentinel);
+            } else sentinel?.classList.remove('hidden');
         } catch (error) {
             console.error('Error in setSortBy:', error);
         } finally {
@@ -1115,6 +1220,42 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    if (genreSortSelect) {
+        genreSortSelect.addEventListener('change', () => {
+            const newVal = genreSortSelect.value || 'name';
+            if (newVal !== genreSort) {
+                genreSort = newVal;
+                if (activeSortBy && activeSortBy.startsWith('genre:')) {
+                    resetFeedForSort();
+                    setSortBy(activeSortBy, true);
+                }
+            }
+        });
+    }
+
+    try {
+        const sortDropdown = document.getElementById('genreSortDropdown');
+        const sortLabel = document.getElementById('genreSortLabel');
+        if (sortDropdown && genreSortSelect) {
+            const items = sortDropdown.querySelectorAll('.dropdown-item');
+            items.forEach((item) => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const val = item.getAttribute('data-value');
+                    if (!val) return;
+                    if (genreSortSelect.value !== val) {
+                        genreSortSelect.value = val;
+                        const evt = new Event('change', { bubbles: true });
+                        genreSortSelect.dispatchEvent(evt);
+                    }
+                    // Update label and active state
+                    if (sortLabel) sortLabel.textContent = item.textContent.trim();
+                    items.forEach((i) => i.classList.remove('active'));
+                    item.classList.add('active');
+                });
+            });
+        }
+    } catch (_) {}
 });
 
 function openSearch() {
@@ -1787,10 +1928,22 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    // Ensure Home defaults (no genre UI)
+    try { updateHeaderActionsVisibility(); } catch (_) {}
+
     setupModalEvents();
     setupSignOut();
     initializeObserver();
     fetchCatalogPage();
+
+    // Ensure sort UI is hidden on initial Home load
+    try {
+        if (!activeSortBy || activeSortBy === 'home' || !activeSortBy.startsWith('genre:')) {
+            if (headerActions) headerActions.style.display = 'none';
+            if (genreSortContainer) genreSortContainer.style.display = 'none';
+            if (genreSortSelect) genreSortSelect.disabled = true;
+        }
+    } catch (_) {}
 
     // Add click handler to feed for Continue Watching section
     feed.addEventListener('click', handleFeedClick);

@@ -87,13 +87,34 @@
 </nav>
 
 <main class="container-xxl">
-    <header class="mb-4 d-flex align-items-center justify-content-between">
-    <h2 class="h4 text-white-50 mb-0" id="pageHeader" style="display:none;">Continue Watching</h2>
-        <div id="watchedToggleContainer" class="form-check form-switch ms-auto" style="display:none;">
-            <input class="form-check-input" type="checkbox" role="switch" id="watchedOnlyToggle" />
-            <label class="form-check-label text-white-50" for="watchedOnlyToggle">Watched only</label>
-        </div>
-    </header>
+        <header class="mb-4 d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-3 flex-grow-1">
+                <h2 class="h4 text-white-50 mb-0" id="pageHeader" style="display:none;">Continue Watching</h2>
+                <div id="genreSortContainer" class="align-items-center" style="display:none;">
+                    <div class="dropdown" id="genreSortDropdown">
+                        <button class="btn btn-sm btn-dark border-secondary dropdown-toggle fw-semibold text-white-50" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Sort by: <span id="genreSortLabel">Name</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark shadow-sm">
+                            <li><a class="dropdown-item active" href="#" data-value="name">Name</a></li>
+                            <li><a class="dropdown-item" href="#" data-value="popularity">Popularity</a></li>
+                            <li><a class="dropdown-item" href="#" data-value="rating">Rating</a></li>
+                        </ul>
+                    </div>
+                    <select id="genreSortSelect" class="form-select form-select-sm bg-dark text-white border-secondary d-none" style="width:auto;" aria-hidden="true" tabindex="-1">
+                        <option value="name" selected>Name</option>
+                        <option value="popularity">Popularity</option>
+                        <option value="rating">Rating</option>
+                    </select>
+                </div>
+            </div>
+            <div class="ms-auto d-flex align-items-center gap-3" id="headerActions" style="display:none;">
+                <div id="watchedToggleContainer" class="form-check form-switch" style="display:none;">
+                    <input class="form-check-input" type="checkbox" role="switch" id="watchedOnlyToggle" />
+                    <label class="form-check-label text-white-50 fw-semibold" style="font-size:0.95rem;" for="watchedOnlyToggle">Watched only</label>
+                </div>
+            </div>
+        </header>
     
     <script>
         // Navigation handling for categories and genres

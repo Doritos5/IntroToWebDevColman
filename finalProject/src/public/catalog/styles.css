@@ -1079,3 +1079,73 @@ main {
     color: rgba(255,255,255,0.85) !important;
 }
 
+/* ------------------------- Sort-by Select ------------------------- */
+#genreSortContainer .form-select {
+    cursor: pointer;
+    transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+#genreSortContainer .form-select:hover {
+    border-color: #e50914 !important;
+}
+#genreSortContainer .form-select:focus {
+    border-color: #e50914 !important;
+    box-shadow: 0 0 0 .2rem rgba(229, 9, 20, 0.35) !important;
+    outline: 0;
+}
+
+#genreSortContainer .form-select option,
+#genreSortContainer .form-select optgroup {
+    background-color: #141414;
+    color: #fff;
+}
+#genreSortContainer .form-select option:hover {
+    background-color: #b00610;
+    color: #fff;
+}
+#genreSortContainer .form-select option:checked,
+#genreSortContainer .form-select option:focus {
+    background-color: #1f1f1f;
+    color: #fff;
+}
+
+/* Custom dropdown for Sort by */
+#genreSortDropdown .dropdown-menu-dark {
+    background-color: #141414;
+    border: 1px solid #2c2c2c;
+    min-width: 11rem;
+    padding-top: .25rem;
+    padding-bottom: .25rem;
+}
+#genreSortDropdown .dropdown-item {
+    font-size: 0.8rem;
+    color: #ddd;
+    transition: background-color .15s ease, color .15s ease;
+}
+#genreSortDropdown .dropdown-item.active,
+#genreSortDropdown .dropdown-item:active {
+    background-color: #e50914 !important;
+    color: #fff !important;
+}
+#genreSortDropdown .dropdown-item:hover {
+    background-color: #b00610;
+    color: #fff;
+}
+#genreSortDropdown .dropdown-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    background-color: #141414;
+    border: 1px solid #2c2c2c;
+    box-shadow: 0 0 0 .15rem rgba(0,0,0,0.4);
+    transition: border-color .15s ease, box-shadow .15s ease, color .15s ease;
+}
+#genreSortDropdown .dropdown-toggle:hover,
+#genreSortDropdown .dropdown-toggle:focus {
+    border-color: #e50914;
+    box-shadow: 0 0 0 .2rem rgba(229, 9, 20, 0.35);
+    color: #fff !important;
+}
+#genreSortDropdown .dropdown-toggle:active {
+    background-color: #1f1f1f;
+}
+
