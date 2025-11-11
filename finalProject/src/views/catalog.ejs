@@ -119,6 +119,12 @@
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
                 if (typeof window.appendGenreSections === 'undefined') {
+                    // Helper to determine if Home category is currently active
+                    const isHomeActive = () => {
+                        const homeLink = document.getElementById('homeLink');
+                        return !!homeLink && homeLink.classList.contains('active');
+                    };
+
                     // Create genre sections function
                     window.appendGenreSections = function(genreSections) {
                         const feedContainer = document.querySelector('main .container-xxl') || document.querySelector('main');
@@ -241,13 +247,17 @@
                         };
                     }
                     
-                    // Intercept AJAX calls for genre sections
+                    // Intercept AJAX calls for Home extras (genre sections + Most Popular)
                     const originalFetch = window.fetch;
                     window.fetch = function(...args) {
                         return originalFetch.apply(this, args).then(response => {
                             if (response.url.includes('/catalog/data') && response.url.includes('sortBy=home')) {
                                 const clonedResponse = response.clone();
                                 clonedResponse.json().then(data => {
+                                    // Drop if no longer on Home or mismatched category
+                                    if (!isHomeActive()) return;
+                                    if (data && data.requestCategory && data.requestCategory !== 'home') return;
+                                    
                                     if (data.genreSections && Array.isArray(data.genreSections)) {
                                         // Check if we're searching
                                         const urlParams = new URLSearchParams(response.url.split('?')[1]);
@@ -271,6 +281,7 @@
                                         window.genreSectionsResultsCount = totalGenreVideos;
                                         
                                         setTimeout(() => {
+                                            if (!isHomeActive()) return;
                                             window.appendGenreSections(sectionsToShow);
                                             // Check for no results after genre sections are loaded
                                             if (searchTerm && searchTerm.trim() && window.checkAndShowNoResults) {
@@ -296,6 +307,7 @@
                                         }
                                         
                                         setTimeout(() => {
+                                            if (!isHomeActive()) return;
                                             if (window.appendMostPopularSection && mostPopularToShow.length > 0) {
                                                 window.appendMostPopularSection(mostPopularToShow);
                                             }
@@ -315,10 +327,11 @@
                             const sortBy = urlParams.get('sortBy');
                             
                             // Validate profileId and check if we're on Home category
-                            if (profileId && profileId.trim() && (!sortBy || sortBy === 'home')) {
+                            if (profileId && profileId.trim() && (!sortBy || sortBy === 'home') && isHomeActive()) {
                                 fetch(`/catalog/data?offset=0&limit=10&profileId=${encodeURIComponent(profileId)}&sortBy=home&requestCategory=home`)
                                     .then(response => response.json())
                                     .then(data => {
+                                        if (!isHomeActive()) return;
                                         // Handle Most Popular section
                                         if (data.mostPopular && Array.isArray(data.mostPopular) && data.mostPopular.length > 0 && window.appendMostPopularSection) {
                                             window.appendMostPopularSection(data.mostPopular);
