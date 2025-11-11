@@ -803,7 +803,7 @@ async function fetchCatalogPage() {
                 // Home category: Handle Continue Watching section
                 const pageHeader = document.getElementById('pageHeader');
                 if (pageHeader) {
-                    // Hide pageHeader if there are no Continue Watching results
+                    // During search: show only if there are Continue Watching results
                     pageHeader.style.display = catalogItems.length > 0 ? 'block' : 'none';
                 }
                 
@@ -824,6 +824,12 @@ async function fetchCatalogPage() {
             if (activeSortBy === 'home') {
                 window.continueWatchingResultsCount = catalogItems.length;
                 window.genreSectionsResultsCount = 0; // Will be set by genre sections
+                // Outside of search: show header only if there are items in Continue Watching
+                const pageHeader = document.getElementById('pageHeader');
+                if (pageHeader) {
+                    const hasItems = (catalogItems.length > 0) || (feed && feed.children && feed.children.length > 0);
+                    pageHeader.style.display = hasItems ? 'block' : 'none';
+                }
             } else {
                 window.mainResultsCount = catalogItems.length;
             }
@@ -953,20 +959,24 @@ async function setSortBy(sortBy, forceReload = false) {
             }
         }
         
-        // Update page header based on category
+        // Update header area based on category
         const pageHeader = document.getElementById('pageHeader');
         if (pageHeader) {
-            // Always show the header when switching categories (not during search)
-            pageHeader.style.display = 'block';
             if (sortBy === 'home') {
+                // Set title but hide until we confirm items exist
                 pageHeader.textContent = 'Continue Watching';
+                pageHeader.style.display = 'none';
                 // Hide watched-only toggle on home
                 if (watchedToggleContainer) watchedToggleContainer.style.display = 'none';
             } else if (sortBy.startsWith('genre:')) {
-                const genre = sortBy.replace('genre:', '');
-                pageHeader.textContent = genre;
+                // For genre categories, hide the section name
+                pageHeader.textContent = '';
+                pageHeader.style.display = 'none';
                 // Show watched-only toggle on genre
                 if (watchedToggleContainer) watchedToggleContainer.style.display = '';
+            } else {
+                // Default fallback: show header
+                pageHeader.style.display = 'block';
             }
         }
         
@@ -1137,13 +1147,6 @@ function closeSearch() {
     // Remove class to re-enable magnifying glass
     document.body.classList.remove('search-active');
     
-    // Show pageHeader and hide no-results message when search is cleared
-    if (activeSortBy === 'home') {
-        const pageHeader = document.getElementById('pageHeader');
-        if (pageHeader) {
-            pageHeader.style.display = 'block';
-        }
-    }
     hideNoResultsMessage();
     
     resetFeed();
@@ -1294,14 +1297,7 @@ function debouncedSearch(searchTerm) {
             try {
                 activeSearchTerm = searchTerm;
                 
-                // Show pageHeader and hide no-results message when search is cleared
                 if (!activeSearchTerm) {
-                    if (activeSortBy === 'home') {
-                        const pageHeader = document.getElementById('pageHeader');
-                        if (pageHeader) {
-                            pageHeader.style.display = 'block';
-                        }
-                    }
                     hideNoResultsMessage();
                 }
                 
@@ -1327,13 +1323,6 @@ function handleSearchInput(event) {
         }
         
         activeSearchTerm = '';
-        
-        if (activeSortBy === 'home') {
-            const pageHeader = document.getElementById('pageHeader');
-            if (pageHeader) {
-                pageHeader.style.display = 'block';
-            }
-        }
         hideNoResultsMessage();
         
         resetFeed();
