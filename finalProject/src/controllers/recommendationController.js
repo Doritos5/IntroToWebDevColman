@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { Video } = require('../models/catalogModel');
 const { Profile } = require('../models/profileModel');
 const { ViewingSession } = require('../models/viewingSessionModel');
-const userModel = require('../models/userModel'); // לבדיקת בעלות על הפרופיל
+const userModel = require('../models/userModel');
 
 function asObjectIds(ids = []) {
   return ids
@@ -65,14 +65,14 @@ exports.getRecommendations = async function getRecommendations(req, res) {
       const isWatched = watchedIds.some(x => x.toString() === idStr);
 
       genres.forEach(g => {
-        if (isLiked)   genreCounterLiked[g]   = (genreCounterLiked[g]   || 0) + 1;
+        if (isLiked) genreCounterLiked[g] = (genreCounterLiked[g] || 0) + 1;
         if (isWatched) genreCounterWatched[g] = (genreCounterWatched[g] || 0) + 1;
       });
     });
 
-    const topLikedGenres   = topN(genreCounterLiked, 6);
+    const topLikedGenres = topN(genreCounterLiked, 6);
     const topWatchedGenres = topN(genreCounterWatched, 6);
-    const combinedGenres   = [...new Set([...topLikedGenres, ...topWatchedGenres])];
+    const combinedGenres = [...new Set([...topLikedGenres, ...topWatchedGenres])];
 
     const excludeIds = new Set([...likedIds.map(String), ...watchedIds.map(String)]);
 
@@ -81,7 +81,7 @@ exports.getRecommendations = async function getRecommendations(req, res) {
       .select({ title: 1, genres: 1, likes: 1, poster: 1, year: 1, type: 1, series: 1, episodeNumber: 1 })
       .lean({ virtuals: true });
 
-    const likedSet   = new Set(topLikedGenres);
+    const likedSet = new Set(topLikedGenres);
     const watchedSet = new Set(topWatchedGenres);
 
     const scored = [];
@@ -92,7 +92,7 @@ exports.getRecommendations = async function getRecommendations(req, res) {
       const g = Array.isArray(v.genres) ? v.genres : [];
       let score = 0;
 
-      const likedHits   = g.filter(x => likedSet.has(x)).length;   // משקל 3
+      const likedHits = g.filter(x => likedSet.has(x)).length;   // משקל 3
       const watchedHits = g.filter(x => watchedSet.has(x)).length; // משקל 2
 
       score += likedHits * 3;
@@ -110,7 +110,24 @@ exports.getRecommendations = async function getRecommendations(req, res) {
       return String(a.v.title || '').localeCompare(String(b.v.title || ''));
     });
 
-    const items = scored.slice(0, limit).map(x => x.v);
+    let items = scored.slice(0, limit).map(x => x.v);
+
+    if (!items.length && seedIds.length) {
+      const fallbackVideos = await Video.find({ _id: { $in: seedIds } })
+        .select({
+          title: 1,
+          genres: 1,
+          likes: 1,
+          poster: 1,
+          year: 1,
+          type: 1,
+          series: 1,
+          episodeNumber: 1
+        })
+        .lean({ virtuals: true });
+
+      items = fallbackVideos.slice(0, limit);
+    }
 
     return res.json({
       profileId,
@@ -122,6 +139,7 @@ exports.getRecommendations = async function getRecommendations(req, res) {
       },
       items
     });
+
   } catch (err) {
     console.error('[recommendations] Error:', err);
     return res.status(500).json({ message: 'Failed to compute recommendations.' });

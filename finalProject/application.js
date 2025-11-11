@@ -13,7 +13,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const catalogRoutes = require('./src/routes/catalogRoutes');
 const profileRoutes = require('./src/routes/profileRoutes');
 const likeRoutes = require('./src/routes/likeRoutes');
-
+const recommendationRoutes = require('./src/routes/recommendationRoutes');
 const contentRoutes = require('./src/routes/contentRoutes');
 const { logger } = require("./src/middleware/logger");
 const { connectToDatabase } = require('./src/utils/db');
@@ -54,6 +54,7 @@ app.use('/catalog', catalogRoutes);
 app.use('/profiles', profileRoutes);
 app.use('/likes', likeRoutes);
 app.use('/', contentRoutes);
+app.use('/api', recommendationRoutes);
 
 async function startServer() {
     try {
