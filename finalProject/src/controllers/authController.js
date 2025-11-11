@@ -1,4 +1,5 @@
 const crypto = require('crypto')
+const { logError } = require('../middleware/logger');
 const bcrypt = require('bcrypt')
 const{
     createUser,
@@ -40,6 +41,7 @@ async function login (req, res) {
         const userForClient = sanitizeUser(await getUserByEmail(email, { hydrate: true }));
         return res.status(200).json({ message: 'Login successful.', user: userForClient });
     } catch (error) {
+        logError('[Auth] Login error', error, { email });
         console.error('[Auth] Login error:', error);
         return res.status(500).json({ message: 'An unexpected error occurred.' });
     }
@@ -108,6 +110,7 @@ async function register (req, res) {
         };
         return res.status(201).json({ message: 'Registration successful.', user: sanitizeUser(newUserObj) });
     } catch (error) {
+        logError('[Auth] Registration error', error, { email, username });
         console.error('[Auth] Registration error:', error);
         return res.status(500).json({ message: 'An unexpected error occurred.' });
     }
@@ -122,6 +125,7 @@ async function renderSettingsPage(req, res) {
             user: req.session.user
         });
     } catch (error) {
+        logError('Error rendering settings page', error, { userEmail: req.session.user?.email });
         console.error('Error rendering settings page:', error);
         res.status(500).send('Server error');
     }

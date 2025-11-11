@@ -1,10 +1,36 @@
+const Log = require('../models/logModel');
 const logger = (req, res, next) => {
     const timestamp = new Date().toISOString();
     const method = req.method;
     const url = req.url;
-
+    const message = `${method} ${url}`;
     console.log(`[${timestamp}] ${method} ${url}`);
-    next();
+    Log.create({
+    level: 'info',
+    message,
+    meta: { method, url, timestamp }
+  }).catch((err) => {
+    console.error('[Logger] Failed to save log', err.message);
+  });
+
+  next();
 };
 
-module.exports = { logger };
+const logError = (msg, error, meta = {}) => {
+  console.error('[ERROR]', msg, error?.message || '');
+
+  Log.create({
+    level: 'error',
+    message: msg,
+    meta: {
+      ...meta,
+      error: error
+        ? { message: error.message, stack: error.stack }
+        : undefined
+    }
+  }).catch((err) => {
+    console.error('[Logger] Failed to save error log', err.message);
+  });
+};
+
+module.exports = { logger, logError };
