@@ -987,4 +987,54 @@ main {
     width: 100%;
 }
 
+/* ---- Scrollable Genres Strip (navbar middle) ---- */
+.genres-viewport {
+    min-width: 0;
+    position: relative; /* for the fade edges */
+}
+
+.genres-strip {
+    /* keep items on one line and allow horizontal scroll */
+    white-space: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    gap: .25rem;
+    padding-left: 0;
+    margin-left: 0 !important;
+}
+
+.genres-strip .nav-link {
+    padding-left: .5rem;
+    padding-right: .5rem;
+}
+
+/* show a thin scrollbar */
+.genres-strip::-webkit-scrollbar { height: 6px; }
+.genres-strip::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,.25);
+    border-radius: 3px;
+}
+.genres-strip::-webkit-scrollbar-track { background: transparent; }
+
+/* right utilities cluster should never shrink */
+.navbar-utils { flex-shrink: 0; }
+
+/* subtle edge fades to hint more content */
+.genres-viewport::before,
+.genres-viewport::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 24px;
+    pointer-events: none;
+}
+.genres-viewport::before {
+    left: 0;
+    background: linear-gradient(to right, rgba(0,0,0,.7), transparent);
+}
+.genres-viewport::after {
+    right: 0;
+    background: linear-gradient(to left, rgba(0,0,0,.7), transparent);
+}
 

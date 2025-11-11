@@ -1549,18 +1549,26 @@ function setupModalEvents() {
 
 function setupSignOut() {
     const signOut = document.getElementById('signOutLink') || Array.from(document.querySelectorAll('.dropdown-menu a')).find((a) => a.textContent.trim().toLowerCase() === 'sign out');
-    if (signOut) {
-        signOut.addEventListener('click', (e) => {
-            e.preventDefault();
-            try {
-                localStorage.removeItem('selectedProfileId');
-                localStorage.removeItem('selectedProfileName');
-            } catch (err) {
-                console.warn('Unable to clear profile selection', err);
+    if (!signOut) return;
+    signOut.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+            localStorage.removeItem('selectedProfileId');
+            localStorage.removeItem('selectedProfileName');
+        } catch (err) {
+            console.warn('Unable to clear profile selection', err);
+        }
+        try {
+            const resp = await fetch('/logout', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+            if (!resp.ok) {
+                console.warn('Logout request failed', resp.status);
             }
-            window.location.replace('/');
-        });
-    }
+        } catch (err) {
+            console.warn('Logout network error', err);
+        } finally {
+            window.location.replace('/login');
+        }
+    });
 }
 
 // ------------------------- Event Wiring -------------------------
