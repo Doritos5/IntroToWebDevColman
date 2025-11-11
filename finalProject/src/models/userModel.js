@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const profileModel = require('./profileModel');
 const bcrypt = require('bcrypt');
 const { Profile } = require('./profileModel');
+const { deleteHistoryByProfileId } = require('./viewingSessionModel');
 
 const userSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true },
@@ -33,7 +34,7 @@ function validateUserFields(userData) {
         }
     }
     if (userData.password.length < 6) {
-        throw new Error('Password must be at least 8 characters');
+        throw new Error('Password must be at least 6 characters');
     }
 }
 
@@ -51,6 +52,7 @@ function toPlain(userDoc) {
 
     const cloned = { ...userDoc };
     delete cloned.__v;
+    delete cloned.password;
     return cloned;
 }
 
@@ -150,17 +152,6 @@ async function updateUserPassword(id, newPlainPassword) {
     return toPlain(user);
 }
 
-async function deleteUserById(id) {
-    if (!id) {
-        return null; }
-
-    const result = await User.deleteOne({ id });
-
-    if (result.deletedCount > 0) {
-        return true; }
-    return false;
-}
-
 async function updateProfile(email, profileId, updates) {
     const user = await getUserByEmail(email);
     if (!user) {
@@ -208,6 +199,27 @@ async function addProfileToUser(email, profileName) {
 
     return profileModel.createProfile(profileData);
 }
+
+async function deleteUserById(id) {
+    if (!id) {
+        return null;
+    }
+    const user = await User.findOneAndDelete({ id });
+    if (!user) {
+        return null;
+    }
+    const profiles = await Profile.find({ userId: id }).lean();
+    const profileIds = profiles.map((p) => p.id);
+    if (profileIds.length > 0) {
+        await Profile.deleteMany({ userId: id });
+
+        for (const profileId of profileIds) {
+            await deleteHistoryByProfileId(profileId);
+        }
+    }
+    return toPlain(user);
+}
+
 
 async function deleteProfileById(profileId) {
     const result = await Profile.deleteOne({ id: profileId });
