@@ -87,9 +87,34 @@
 </nav>
 
 <main class="container-xxl">
-    <header class="mb-4">
-        <h2 class="h4 text-white-50 mb-0" id="pageHeader">Continue Watching</h2>
-    </header>
+        <header class="mb-4 d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-3 flex-grow-1">
+                <h2 class="h4 text-white-50 mb-0" id="pageHeader" style="display:none;">Continue Watching</h2>
+                <div id="genreSortContainer" class="align-items-center" style="display:none;">
+                    <div class="dropdown" id="genreSortDropdown">
+                        <button class="btn btn-sm btn-dark border-secondary dropdown-toggle fw-semibold text-white-50" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Sort by: <span id="genreSortLabel">Name</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark shadow-sm">
+                            <li><a class="dropdown-item active" href="#" data-value="name">Name</a></li>
+                            <li><a class="dropdown-item" href="#" data-value="popularity">Popularity</a></li>
+                            <li><a class="dropdown-item" href="#" data-value="rating">Rating</a></li>
+                        </ul>
+                    </div>
+                    <select id="genreSortSelect" class="form-select form-select-sm bg-dark text-white border-secondary d-none" style="width:auto;" aria-hidden="true" tabindex="-1">
+                        <option value="name" selected>Name</option>
+                        <option value="popularity">Popularity</option>
+                        <option value="rating">Rating</option>
+                    </select>
+                </div>
+            </div>
+            <div class="ms-auto d-flex align-items-center gap-3" id="headerActions" style="display:none;">
+                <div id="watchedToggleContainer" class="form-check form-switch" style="display:none;">
+                    <input class="form-check-input" type="checkbox" role="switch" id="watchedOnlyToggle" />
+                    <label class="form-check-label text-white-50 fw-semibold" style="font-size:0.95rem;" for="watchedOnlyToggle">Watched only</label>
+                </div>
+            </div>
+        </header>
     
     <script>
         // Navigation handling for categories and genres
@@ -115,6 +140,12 @@
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
                 if (typeof window.appendGenreSections === 'undefined') {
+                    // Helper to determine if Home category is currently active
+                    const isHomeActive = () => {
+                        const homeLink = document.getElementById('homeLink');
+                        return !!homeLink && homeLink.classList.contains('active');
+                    };
+
                     // Create genre sections function
                     window.appendGenreSections = function(genreSections) {
                         const feedContainer = document.querySelector('main .container-xxl') || document.querySelector('main');
@@ -237,13 +268,17 @@
                         };
                     }
                     
-                    // Intercept AJAX calls for genre sections
+                    // Intercept AJAX calls for Home extras (genre sections + Most Popular)
                     const originalFetch = window.fetch;
                     window.fetch = function(...args) {
                         return originalFetch.apply(this, args).then(response => {
                             if (response.url.includes('/catalog/data') && response.url.includes('sortBy=home')) {
                                 const clonedResponse = response.clone();
                                 clonedResponse.json().then(data => {
+                                    // Drop if no longer on Home or mismatched category
+                                    if (!isHomeActive()) return;
+                                    if (data && data.requestCategory && data.requestCategory !== 'home') return;
+                                    
                                     if (data.genreSections && Array.isArray(data.genreSections)) {
                                         // Check if we're searching
                                         const urlParams = new URLSearchParams(response.url.split('?')[1]);
@@ -267,6 +302,7 @@
                                         window.genreSectionsResultsCount = totalGenreVideos;
                                         
                                         setTimeout(() => {
+                                            if (!isHomeActive()) return;
                                             window.appendGenreSections(sectionsToShow);
                                             // Check for no results after genre sections are loaded
                                             if (searchTerm && searchTerm.trim() && window.checkAndShowNoResults) {
@@ -292,6 +328,7 @@
                                         }
                                         
                                         setTimeout(() => {
+                                            if (!isHomeActive()) return;
                                             if (window.appendMostPopularSection && mostPopularToShow.length > 0) {
                                                 window.appendMostPopularSection(mostPopularToShow);
                                             }
@@ -311,10 +348,11 @@
                             const sortBy = urlParams.get('sortBy');
                             
                             // Validate profileId and check if we're on Home category
-                            if (profileId && profileId.trim() && (!sortBy || sortBy === 'home')) {
+                            if (profileId && profileId.trim() && (!sortBy || sortBy === 'home') && isHomeActive()) {
                                 fetch(`/catalog/data?offset=0&limit=10&profileId=${encodeURIComponent(profileId)}&sortBy=home&requestCategory=home`)
                                     .then(response => response.json())
                                     .then(data => {
+                                        if (!isHomeActive()) return;
                                         // Handle Most Popular section
                                         if (data.mostPopular && Array.isArray(data.mostPopular) && data.mostPopular.length > 0 && window.appendMostPopularSection) {
                                             window.appendMostPopularSection(data.mostPopular);
