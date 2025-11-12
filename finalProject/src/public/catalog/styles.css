@@ -83,6 +83,7 @@ body.navbar-page::after{
 }
 .genres-strip {
     flex-wrap: nowrap;
+}
 
 .nav-link {
     color: #fff !important;
