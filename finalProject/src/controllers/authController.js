@@ -25,7 +25,7 @@ async function login(req, res) {
         return res.status(400).json({ message: 'Email and password are required.' });
     }
     try {
-        const userRaw = await getUserByEmail(email); // (hydrate: false הוא ברירת מחדל)
+        const userRaw = await getUserByEmail(email); 
         if (!userRaw) {
             logInfo('[Auth] Login failed - user not found', { email });
             return res.status(401).json({ message: 'Invalid email or password.' });
