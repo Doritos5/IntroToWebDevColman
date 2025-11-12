@@ -134,7 +134,8 @@ async function renderSettingsPage(req, res) {
         const user = await getUserByEmail(userEmail, { hydrate: true });
         res.render('settings', {
             profiles: user.profiles || [],
-            user: req.session.user
+            user: req.session.user,
+            title: 'Configuration'
         });
     } catch (error) {
         logError('Error rendering settings page', error, { userEmail: req.session.user?.email });
