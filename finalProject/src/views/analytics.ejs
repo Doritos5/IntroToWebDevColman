@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Analytics</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link href="/catalog/styles.css" rel="stylesheet" />
+
+    <style>
+        body.navbar-page {
+            background-color: #000;
+            color: #fff;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .analytics-page {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px 24px 40px;
+        }
+
+        .analytics-title {
+            color: #e50914;
+            font-size: 2.4rem;
+            font-weight: 500;
+            margin-top: 20px;
+            margin-bottom: 24x;
+        }
+
+        .analytics-subtitle {
+            font-size: 0.95rem;
+            color: #b3b3b3;
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            margin: 24px 0 10px;
+            font-weight: 500;
+        }
+
+        .chart-card {
+            background-color: #141414;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 24px;
+            border: 1px solid #262626;
+        }
+
+        .chart-card canvas {
+            width: 100% !important;
+            height: 280px !important;
+        }
+
+        .chart-note {
+            font-size: 0.78rem;
+            color: #808080;
+            margin-top: 4px;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            color: white;
+            text-decoration: underline;
+            font-size: 18px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.3s ease;
+        }
+
+        .back-btn i {
+            font-size: 18px;
+        }
+
+        .back-btn:hover {
+            color: #ccc;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body class="navbar-page">
+    <!-- Back button -->
+    <a href="/catalog/?profileId=<%= profileId %>" class="back-btn">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+
+    <main class="analytics-page">
+        <h1 class="analytics-title">Analytics</h1>
+        <div class="analytics-subtitle">
+            Viewing activity and content performance overview.
+        </div>
+
+        <section>
+            <h2 class="section-title">Daily Views per Profile (Last 7 Days)</h2>
+            <div class="chart-card">
+                <canvas id="dailyViewsChart"></canvas>
+                <div class="chart-note">
+                    Each color represents a profile. Days without data are shown as 0 views.
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="section-title">Content Popularity by Genre (Last 90 Days)</h2>
+            <div class="chart-card">
+                <canvas id="genreChart"></canvas>
+                <div class="chart-note">
+                    Based on completed viewing sessions by genre.
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const dailyViewsLabels = <%- JSON.stringify(dailyViewsLabels || []) %>;
+        const dailyViewsDatasets = <%- JSON.stringify(dailyViewsDatasets || []) %>;
+        const genreLabels = <%- JSON.stringify(genreLabels || []) %>;
+        const genreData = <%- JSON.stringify(genreData || []) %>;
+
+        const barColors = ['#e50914', '#46d369', '#3b82f6', '#facc15', '#a855f7', '#22c55e'];
+
+        const dailyCtx = document.getElementById('dailyViewsChart');
+        const preparedDatasets = (dailyViewsDatasets || []).map((ds, index) => ({
+            label: ds.label,
+            data: ds.data,
+            backgroundColor: barColors[index % barColors.length]
+        }));
+
+        new Chart(dailyCtx, {
+            type: 'bar',
+            data: {
+                labels: dailyViewsLabels,
+                datasets: preparedDatasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#ffffff',
+                            font: { size: 10 }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#ffffff' },
+                        grid: { color: 'rgba(255,255,255,0.06)' }
+                    },
+                    y: {
+                        ticks: { color: '#ffffff', precision: 0 },
+                        grid: { color: 'rgba(255,255,255,0.12)' }
+                    }
+                }
+            }
+        });
+
+        const genreCtx = document.getElementById('genreChart');
+        const genreColors = genreLabels.map((_, i) => barColors[i % barColors.length]);
+
+        new Chart(genreCtx, {
+            type: 'doughnut',
+            data: {
+                labels: genreLabels,
+                datasets: [{
+                    data: genreData,
+                    backgroundColor: genreColors
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '55%',
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#ffffff',
+                            font: { size: 10 }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

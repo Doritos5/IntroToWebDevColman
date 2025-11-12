@@ -3,6 +3,7 @@ dotenv.config();
 const path = require('path');
 const express = require('express');
 const session = require('express-session');
+const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo');
 
 if (!process.env.SESSION_SECRET) {
@@ -13,6 +14,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const catalogRoutes = require('./src/routes/catalogRoutes');
 const profileRoutes = require('./src/routes/profileRoutes');
 const likeRoutes = require('./src/routes/likeRoutes');
+const analyticsRoutes = require('./src/routes/analyticsRoutes');
 
 const contentRoutes = require('./src/routes/contentRoutes');
 const { logger } = require("./src/middleware/logger");
@@ -53,6 +55,24 @@ app.use('/', authRoutes);
 app.use('/catalog', catalogRoutes);
 app.use('/profiles', profileRoutes);
 app.use('/likes', likeRoutes);
+app.use('/settings/analytics', analyticsRoutes);
+
+app.get('/settings/manage-profiles', async (req, res, next) => {
+  try {
+    const db = mongoose.connection.db;
+    const profilesCollection = db.collection('profiles');
+    const allProfiles = await profilesCollection.find().toArray();
+
+    const profiles = allProfiles.map(p => ({
+      id: String(p._id),
+      displayName: p.displayName || p.name || `Profile ${p._id}`
+    }));
+
+    res.render('settings', { title: 'Manage Profiles', profiles });
+  } catch (err) {
+    next(err);
+  }
+});
 app.use('/', contentRoutes);
 
 async function startServer() {

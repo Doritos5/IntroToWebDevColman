@@ -125,6 +125,39 @@ body.navbar-page::after{
     height: 28px;
 }
 
+/* Submenu inside Settings */
+.has-submenu {
+    position: relative;
+}
+
+.submenu-toggle {
+    cursor: pointer;
+}
+
+.has-submenu > .submenu {
+    display: none;
+    list-style: none;
+    margin: 6px 0 0 0;
+    padding: 0;
+    border-left: 0;
+}
+
+.has-submenu.open > .submenu {
+    display: block;
+}
+
+.has-submenu .dropdown-item {
+    display: block;
+    padding: 8px 12px;
+    color: #fff !important;
+    text-decoration: none;
+}
+
+.has-submenu .dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff !important;
+}
+
 /* So everything except the header and footer will be 84px down fron the top*/
 main {
     padding-top: 84px;
@@ -232,19 +265,6 @@ main {
     position:relative;z-index:1020;background:rgba(0,0,0,.6);
     color:#fff;padding:.75rem 1rem;font-weight:600;
     border-bottom:1px solid rgba(255,255,255,.15);margin-top:56px;
-}
-
-.navbar .nav-greeting {
-    display: inline-block;
-    margin-top: 0; /* override page-level banner spacing */
-    background: transparent;
-    border-bottom: none;
-    padding: .15rem .5rem;
-    color: rgba(255,255,255,0.95);
-    font-weight: 600;
-    font-size: 0.95rem;
-    line-height: 1;
-    vertical-align: middle;
 }
 
 .navbar .nav-greeting {
@@ -983,10 +1003,35 @@ main {
     50% { transform: scale(1.05); opacity: 0.1; }
 }
 
-.clickable-genre-title:hover::after {
-    width: 100%;
+/* --- Settings submenu placement --- */
+.dropdown-submenu { position: relative; }
+
+.dropdown-submenu > .dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -0.25rem;
 }
 
+/* Fix submenu position for right-aligned dropdown (avatar menu) */
+.dropdown-menu-end .dropdown-submenu > .dropdown-menu {
+  left: auto;
+  right: 100%;
+}
+
+
+/* Make sure a submenu with .show is visible */
+.dropdown-menu.show { display: block; }
+
+/* Safety: bring menus above other UI */
+.dropdown-menu { z-index: 1100; }
+
+/* On very small screens, open the submenu below instead of to the side */
+@media (max-width: 576px) {
+  .dropdown-submenu > .dropdown-menu {
+    left: 0;
+    top: 100%;
+  }
+}
 /* ---- Scrollable Genres Strip (navbar middle) ---- */
 .genres-viewport {
     min-width: 0;
@@ -1148,4 +1193,3 @@ main {
 #genreSortDropdown .dropdown-toggle:active {
     background-color: #1f1f1f;
 }
-
