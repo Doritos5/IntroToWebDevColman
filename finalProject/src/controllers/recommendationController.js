@@ -92,8 +92,9 @@ exports.getRecommendations = async function getRecommendations(req, res) {
       const g = Array.isArray(v.genres) ? v.genres : [];
       let score = 0;
 
-      const likedHits = g.filter(x => likedSet.has(x)).length;   // משקל 3
-      const watchedHits = g.filter(x => watchedSet.has(x)).length; // משקל 2
+      // Count how many genres match liked and watched series
+      const likedHits = g.filter(x => likedSet.has(x)).length;   
+      const watchedHits = g.filter(x => watchedSet.has(x)).length; 
 
       score += likedHits * 3;
       score += watchedHits * 2;
