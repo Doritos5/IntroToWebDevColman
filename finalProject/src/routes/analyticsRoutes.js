@@ -5,6 +5,7 @@ const router = express.Router();
 
 router.get('/', async (req, res, next) => {
   try {
+    const { profileId } = req.query;
     const db = mongoose.connection.db;
     const sessions = db.collection('viewingsessions');
     const videos = db.collection('videos');
@@ -110,7 +111,8 @@ router.get('/', async (req, res, next) => {
       dailyViewsLabels,
       dailyViewsDatasets,
       genreLabels,
-      genreData
+      genreData,
+      profileId: typeof profileId === 'string' ? profileId : null
     });
   } catch (err) {
     next(err);

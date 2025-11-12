@@ -125,6 +125,39 @@ body.navbar-page::after{
     height: 28px;
 }
 
+/* Submenu inside Settings */
+.has-submenu {
+    position: relative;
+}
+
+.submenu-toggle {
+    cursor: pointer;
+}
+
+.has-submenu > .submenu {
+    display: none;
+    list-style: none;
+    margin: 6px 0 0 0;
+    padding: 0;
+    border-left: 0;
+}
+
+.has-submenu.open > .submenu {
+    display: block;
+}
+
+.has-submenu .dropdown-item {
+    display: block;
+    padding: 8px 12px;
+    color: #fff !important;
+    text-decoration: none;
+}
+
+.has-submenu .dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff !important;
+}
+
 /* So everything except the header and footer will be 84px down fron the top*/
 main {
     padding-top: 84px;

@@ -34,6 +34,5 @@ router.get('/profiles_page', ensureAuth, (req, res, next) => {
     res.render('profilePage');
 });
 
-router.get('/settings', ensureAuth, renderSettingsPage);
-
+router.get('/settings/manage-profiles', ensureAuth, renderSettingsPage);
 module.exports = router;

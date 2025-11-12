@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <title>Analytics</title>
-
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <link href="/catalog/styles.css" rel="stylesheet" />
 
@@ -19,15 +19,15 @@
         .analytics-page {
             max-width: 1100px;
             margin: 0 auto;
-            padding: 90px 24px 40px;
+            padding: 20px 24px 40px;
         }
 
         .analytics-title {
             color: #e50914;
             font-size: 2.4rem;
             font-weight: 500;
-            margin-top: 40px;
-            margin-bottom: 12px;
+            margin-top: 20px;
+            margin-bottom: 24x;
         }
 
         .analytics-subtitle {
@@ -60,10 +60,37 @@
             color: #808080;
             margin-top: 4px;
         }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            color: white;
+            text-decoration: underline;
+            font-size: 18px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.3s ease;
+        }
+
+        .back-btn i {
+            font-size: 18px;
+        }
+
+        .back-btn:hover {
+            color: #ccc;
+            text-decoration: none;
+        }
     </style>
 </head>
 
 <body class="navbar-page">
+    <!-- Back button -->
+    <a href="/catalog/?profileId=<%= profileId %>" class="back-btn">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+
     <main class="analytics-page">
         <h1 class="analytics-title">Analytics</h1>
         <div class="analytics-subtitle">
@@ -92,10 +119,10 @@
     </main>
 
     <script>
-        const dailyViewsLabels   = <%- JSON.stringify(dailyViewsLabels   || []) %>;
+        const dailyViewsLabels = <%- JSON.stringify(dailyViewsLabels || []) %>;
         const dailyViewsDatasets = <%- JSON.stringify(dailyViewsDatasets || []) %>;
-        const genreLabels        = <%- JSON.stringify(genreLabels        || []) %>;
-        const genreData          = <%- JSON.stringify(genreData          || []) %>;
+        const genreLabels = <%- JSON.stringify(genreLabels || []) %>;
+        const genreData = <%- JSON.stringify(genreData || []) %>;
 
         const barColors = ['#e50914', '#46d369', '#3b82f6', '#facc15', '#a855f7', '#22c55e'];
 
