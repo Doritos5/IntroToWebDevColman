@@ -25,11 +25,17 @@
 
     <nav class="navbar navbar-expand-lg fixed-top">
         <div class="container-fluid">
-            <a class="navbar-brand brand" href="/catalog">Streamix</a>
 
-            <div class="navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item"><a class="nav-link active" href="#" id="homeLink">Home</a></li>
+            <!-- Left: brand (never shrinks) -->
+            <a class="navbar-brand brand flex-shrink-0 me-3" href="/catalog">Streamix</a>
+
+            <!-- Middle: scrollable genres taking remaining space -->
+            <div class="genres-viewport flex-grow-1 overflow-hidden">
+                <ul class="navbar-nav flex-row genres-strip mb-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" id="homeLink">Home</a>
+                    </li>
+
                     <% if (typeof availableGenres !=='undefined' && availableGenres && availableGenres.length> 0) { %>
                         <% availableGenres.forEach(genre=> { %>
                             <li class="nav-item">
@@ -41,58 +47,84 @@
                             <% }); %>
                                 <% } %>
                 </ul>
-
-                <div class="d-flex align-items-center">
-                    <span class="icon-btn bi bi-search"></span>
-                    <div class="search-container">
-                        <label for="searchInput" class="visually-hidden">Search</label>
-                        <input id="searchInput" type="text" class="form-control bg-dark text-white border-0 search-box"
-                            placeholder="Search..." disabled />
-                        <span class="search-close-btn bi bi-x" id="searchCloseBtn"></span>
-                    </div>
-
-                    <% if (locals.profileName) { %>
-                        <div class="greeting-banner nav-greeting ms-3">
-                            Hi, <%= profileName %>
-                        </div>
-                        <% } %>
-
-                            <div class="dropdown ms-3" data-bs-auto-close="outside">
-                                <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle"
-                                    id="avatarMenu" data-bs-toggle="dropdown">
-                                    <img src="/images/netflix_profile.jpg" alt="User" class="rounded user-avatar">
-                                </a>
-                                <ul class="dropdown-menu dropdown-menu-end text-small shadow">
-                                    <li><a class="dropdown-item" href="/profiles_page">Profile</a></li>
-                                    <li class="dropdown-submenu">
-                                        <a class="dropdown-item" href="#" id="settingsToggle">Settings ▸</a>
-                                        <ul class="dropdown-menu" id="settingsMenu">
-                                            <li><a class="dropdown-item" href="/settings/manage-profiles">Manage
-                                                    Profiles</a></li>
-                                            <li><a class="dropdown-item" href="/settings/analytics">Analytics</a></li>
-                                        </ul>
-                                    </li>
-                                    <li>
-                                        <hr class="dropdown-divider">
-                                    </li>
-                                    <li>
-                                        <form action="/logout" method="POST" style="margin:0;">
-                                            <button type="submit" class="dropdown-item">Sign out</button>
-                                        </form>
-                                    </li>
-                                </ul>
-                            </div>
-                </div>
             </div>
+
+            <!-- Right: utilities (never shrink) -->
+            <div class="navbar-utils d-flex align-items-center ms-3 gap-2 flex-shrink-0">
+                <span class="icon-btn bi bi-search"></span>
+
+                <div class="search-container">
+                    <label for="searchInput" class="visually-hidden">Search</label>
+                    <input id="searchInput" type="text" class="form-control bg-dark text-white border-0 search-box"
+                        placeholder="Search..." disabled />
+                    <span class="search-close-btn bi bi-x" id="searchCloseBtn"></span>
+                </div>
+
+                <% if (locals.profileName) { %>
+                    <div class="greeting-banner nav-greeting ms-2">
+                        Hi, <%= profileName %>
+                    </div>
+                    <% } %>
+
+                        <div class="dropdown ms-2">
+                            <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle"
+                                id="avatarMenu" data-bs-toggle="dropdown">
+                                <img src="/images/netflix_profile.jpg" alt="User" class="rounded user-avatar">
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end text-small shadow">
+                                <li><a class="dropdown-item" href="/profiles_page">Change profile</a></li>
+                                <li><a class="dropdown-item" href="/settings">Settings</a></li>
+                                <li><a class="dropdown-item" href="/settings/analytics">Analytics</a></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li><a class="dropdown-item" href="#" id="signOutLink">Logout</a></li>
+                            </ul>
+                        </div>
+            </div>
+
         </div>
     </nav>
 
     <main class="container-xxl">
-        <header class="mb-4">
-            <h2 class="h4 text-white-50 mb-0" id="pageHeader">Continue Watching</h2>
+        <header class="mb-4 d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-3 flex-grow-1">
+                <h2 class="h4 text-white-50 mb-0" id="pageHeader" style="display:none;">Continue Watching</h2>
+                <div id="genreSortContainer" class="align-items-center" style="display:none;">
+                    <div class="dropdown" id="genreSortDropdown">
+                        <button class="btn btn-sm btn-dark border-secondary dropdown-toggle fw-semibold text-white-50"
+                            type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Sort by: <span id="genreSortLabel">Name</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark shadow-sm">
+                            <li><a class="dropdown-item active" href="#" data-value="name">Name</a></li>
+                            <li><a class="dropdown-item" href="#" data-value="popularity">Popularity</a></li>
+                            <li><a class="dropdown-item" href="#" data-value="rating">Rating</a></li>
+                        </ul>
+                    </div>
+                    <select id="genreSortSelect"
+                        class="form-select form-select-sm bg-dark text-white border-secondary d-none"
+                        style="width:auto;" aria-hidden="true" tabindex="-1">
+                        <option value="name" selected>Name</option>
+                        <option value="popularity">Popularity</option>
+                        <option value="rating">Rating</option>
+                    </select>
+                </div>
+            </div>
+            <div class="ms-auto d-flex align-items-center gap-3" id="headerActions" style="display:none;">
+                <div id="watchedToggleContainer" class="form-check form-switch" style="display:none;">
+                    <input class="form-check-input" type="checkbox" role="switch" id="watchedOnlyToggle" />
+                    <label class="form-check-label text-white-50 fw-semibold" style="font-size:0.95rem;"
+                        for="watchedOnlyToggle">Watched only</label>
+                </div>
+            </div>
         </header>
 
         <script>
+            window.isHomeActive = () => {
+                const homeLink = document.getElementById('homeLink');
+                return !!homeLink && homeLink.classList.contains('active');
+            };
             // Navigation handling for categories and genres
             document.addEventListener('click', function (e) {
                 if (e.target && e.target.id === 'homeLink') {
@@ -238,13 +270,17 @@
                             };
                         }
 
-                        // Intercept AJAX calls for genre sections
+                        // Intercept AJAX calls for Home extras (genre sections + Most Popular)
                         const originalFetch = window.fetch;
                         window.fetch = function (...args) {
                             return originalFetch.apply(this, args).then(response => {
                                 if (response.url.includes('/catalog/data') && response.url.includes('sortBy=home')) {
                                     const clonedResponse = response.clone();
                                     clonedResponse.json().then(data => {
+                                        // Drop if no longer on Home or mismatched category
+                                        if (!isHomeActive()) return;
+                                        if (data && data.requestCategory && data.requestCategory !== 'home') return;
+
                                         if (data.genreSections && Array.isArray(data.genreSections)) {
                                             // Check if we're searching
                                             const urlParams = new URLSearchParams(response.url.split('?')[1]);
@@ -268,6 +304,7 @@
                                             window.genreSectionsResultsCount = totalGenreVideos;
 
                                             setTimeout(() => {
+                                                if (!isHomeActive()) return;
                                                 window.appendGenreSections(sectionsToShow);
                                                 // Check for no results after genre sections are loaded
                                                 if (searchTerm && searchTerm.trim() && window.checkAndShowNoResults) {
@@ -293,6 +330,7 @@
                                             }
 
                                             setTimeout(() => {
+                                                if (!isHomeActive()) return;
                                                 if (window.appendMostPopularSection && mostPopularToShow.length > 0) {
                                                     window.appendMostPopularSection(mostPopularToShow);
                                                 }
@@ -312,22 +350,72 @@
                                 const sortBy = urlParams.get('sortBy');
 
                                 // Validate profileId and check if we're on Home category
-                                if (profileId && profileId.trim() && (!sortBy || sortBy === 'home')) {
+                                if (profileId && profileId.trim() && (!sortBy || sortBy === 'home') && isHomeActive()) {
                                     fetch(`/catalog/data?offset=0&limit=10&profileId=${encodeURIComponent(profileId)}&sortBy=home&requestCategory=home`)
                                         .then(response => response.json())
                                         .then(data => {
+                                            if (!isHomeActive()) return;
                                             // Handle Most Popular section
                                             if (data.mostPopular && Array.isArray(data.mostPopular) && data.mostPopular.length > 0 && window.appendMostPopularSection) {
                                                 window.appendMostPopularSection(data.mostPopular);
                                             }
                                             // Handle genre sections
                                             if (data.genreSections && Array.isArray(data.genreSections)) {
-                                                window.appendGenreSections(data.genreSections);
+                                                // Check if we're searching
+                                                const urlParams = new URLSearchParams(response.url.split('?')[1]);
+                                                const searchTerm = urlParams.get('search');
+
+                                                let sectionsToShow = data.genreSections;
+
+                                                if (searchTerm && searchTerm.trim()) {
+                                                    // Filter genre sections to only show videos matching search
+                                                    const searchLower = searchTerm.toLowerCase().trim();
+                                                    sectionsToShow = data.genreSections.map(section => ({
+                                                        ...section,
+                                                        videos: section.videos.filter(video =>
+                                                            video.title && video.title.toLowerCase().includes(searchLower)
+                                                        )
+                                                    })).filter(section => section.videos.length > 0); // Only keep sections with matching videos
+                                                }
+
+                                                // Store genre sections results count for no-results check
+                                                const totalGenreVideos = sectionsToShow.reduce((total, section) => total + section.videos.length, 0);
+                                                window.genreSectionsResultsCount = totalGenreVideos;
+
+                                                setTimeout(() => {
+                                                    window.appendGenreSections(sectionsToShow);
+                                                    // Check for no results after genre sections are loaded
+                                                    if (searchTerm && searchTerm.trim() && window.checkAndShowNoResults) {
+                                                        window.checkAndShowNoResults(searchTerm);
+                                                    }
+                                                }, 100);
                                             }
-                                        })
-                                        .catch(error => console.error('Sections loading failed:', error));
+
+                                            // Handle Most Popular section
+                                            if (data.mostPopular && Array.isArray(data.mostPopular)) {
+                                                // Check if we're searching
+                                                const urlParams = new URLSearchParams(response.url.split('?')[1]);
+                                                const searchTerm = urlParams.get('search');
+
+                                                let mostPopularToShow = data.mostPopular;
+
+                                                if (searchTerm && searchTerm.trim()) {
+                                                    // Filter Most Popular to only show videos matching search
+                                                    const searchLower = searchTerm.toLowerCase().trim();
+                                                    mostPopularToShow = data.mostPopular.filter(video =>
+                                                        video.title && video.title.toLowerCase().includes(searchLower)
+                                                    );
+                                                }
+
+                                                setTimeout(() => {
+                                                    if (window.appendMostPopularSection && mostPopularToShow.length > 0) {
+                                                        window.appendMostPopularSection(mostPopularToShow);
+                                                    }
+                                                }, 50); // Show Most Popular before genre sections
+                                            }
+                                        }).catch(error => console.error('Sections fetch failed:', error));
                                 }
-                            }, 1500);
+                            });
                         }
                     }
                 }, 500);

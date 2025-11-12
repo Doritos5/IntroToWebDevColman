@@ -26,6 +26,11 @@ const initialLoadSize = feed?.dataset.initialSize;
 const standardLoadSize = feed?.dataset.pageSize;
 const MINIMUM_LOADER_DURATION_MS = 2000;
 const feedLoader = document.getElementById('feedLoader');
+const watchedToggle = document.getElementById('watchedOnlyToggle');
+const watchedToggleContainer = document.getElementById('watchedToggleContainer');
+const headerActions = document.getElementById('headerActions');
+const genreSortSelect = document.getElementById('genreSortSelect');
+const genreSortContainer = document.getElementById('genreSortContainer');
 
 if (feedLoader) {
     feedLoader.classList.remove('is-visible');
@@ -55,6 +60,111 @@ let episodeOrder = [];
 let currentSeriesId = null;
 let loadedSeriesId = null;
 let seriesEpisodesCache = new Map();
+let watchedOnly = false; // applies only to genre categories
+let genreSort = 'name'; // 'name' | 'popularity' | 'rating' for genre categories
+let watchedFilterCache = {
+    profileId: null,
+    genre: null,
+    movieIds: new Set(),
+    seriesIds: new Set(),
+    videoIds: new Set(),
+    loaded: false,
+};
+
+function normalizeId(val) {
+    if (!val) return null;
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object') {
+        // Handle Buffer-like shape from JSON
+        if (val.type === 'Buffer' && Array.isArray(val.data)) {
+            try { return Array.from(val.data).map((b) => b.toString(16).padStart(2, '0')).join(''); } catch (_) { /* ignore */ }
+        }
+        if (typeof val.toString === 'function') {
+            const s = val.toString();
+            if (s && s !== '[object Object]') return s;
+        }
+    }
+    return null;
+}
+
+// Keep header actions visibility in sync with category
+function updateHeaderActionsVisibility() {
+    const isHome = !activeSortBy || activeSortBy === 'home';
+    const isGenre = !!(activeSortBy && activeSortBy.startsWith('genre:'));
+    const pageHeader = document.getElementById('pageHeader');
+    if (isHome) {
+        if (pageHeader) {
+            // Always reset header text; visibility decided after fetching home data
+            pageHeader.textContent = 'Continue Watching';
+        }
+        if (watchedToggleContainer) watchedToggleContainer.style.display = 'none';
+        if (headerActions) { headerActions.style.display = 'none'; headerActions.classList.remove('d-flex'); }
+        if (genreSortSelect) genreSortSelect.disabled = true;
+        if (genreSortContainer) { genreSortContainer.style.display = 'none'; genreSortContainer.classList.remove('d-flex'); }
+        return;
+    }
+    if (isGenre) {
+        if (pageHeader) {
+            pageHeader.textContent = '';
+            pageHeader.style.display = 'none';
+        }
+        if (headerActions) { headerActions.style.display = ''; headerActions.classList.add('d-flex'); }
+        if (watchedToggleContainer) watchedToggleContainer.style.display = '';
+        if (genreSortSelect) genreSortSelect.disabled = false;
+        if (genreSortContainer) { genreSortContainer.style.display = ''; genreSortContainer.classList.add('d-flex'); }
+        return;
+    }
+    // Fallback: hide actions
+    if (headerActions) { headerActions.style.display = 'none'; headerActions.classList.remove('d-flex'); }
+    if (watchedToggleContainer) watchedToggleContainer.style.display = 'none';
+    if (genreSortContainer) { genreSortContainer.style.display = 'none'; genreSortContainer.classList.remove('d-flex'); }
+    if (genreSortSelect) genreSortSelect.disabled = true;
+}
+
+async function loadWatchedSetsForGenre(profileId, genre) {
+    try {
+        if (
+            watchedFilterCache.loaded &&
+            watchedFilterCache.profileId === profileId &&
+            watchedFilterCache.genre === genre
+        ) {
+            return watchedFilterCache;
+        }
+        const url = `/catalog/debug/viewing-sessions?profileId=${encodeURIComponent(profileId)}&genre=${encodeURIComponent(genre)}&_=${Date.now()}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed to load watched sets');
+        const data = await res.json();
+        watchedFilterCache = {
+            profileId,
+            genre,
+            movieIds: new Set(Array.isArray(data.watchedMovieIds) ? data.watchedMovieIds : []),
+            seriesIds: new Set(Array.isArray(data.watchedSeriesIds) ? data.watchedSeriesIds : []),
+            videoIds: new Set(Array.isArray(data.watchedVideoIds) ? data.watchedVideoIds : []),
+            loaded: true,
+        };
+        return watchedFilterCache;
+    } catch (_) {
+    watchedFilterCache = { profileId: null, genre: null, movieIds: new Set(), seriesIds: new Set(), videoIds: new Set(), loaded: false };
+        return watchedFilterCache;
+    }
+}
+
+function applyWatchedFilterIfNeeded(items, currentProfileId, currentSortBy) {
+    if (!items || !Array.isArray(items)) return [];
+    if (!(currentSortBy && currentSortBy.startsWith('genre:'))) return items;
+    if (!watchedOnly) return items;
+    const filtered = items.filter((item) => {
+        const id = normalizeId(item.id);
+        const seriesId = normalizeId(item.seriesId);
+        if (watchedFilterCache.loaded) {
+            if (watchedFilterCache.movieIds.has(id) || watchedFilterCache.videoIds.has(id)) return true;
+            if (seriesId && watchedFilterCache.seriesIds.has(seriesId)) return true;
+            return false;
+        }
+        return false;
+    });
+    return filtered;
+}
 
 // ------------------------- Helpers -------------------------
 
@@ -170,9 +280,62 @@ function appendVideos(videos) {
         episodesMap.set(video.id, video);
         const wrapper = document.createElement('div');
         wrapper.innerHTML = createCardHTML(video);
-        fragment.appendChild(wrapper.firstElementChild);
+        const card = wrapper.firstElementChild;
+        if (watchedOnly && activeSortBy && activeSortBy.startsWith('genre:')) {
+            const badge = document.createElement('div');
+            badge.className = 'position-absolute top-0 end-0 m-2 px-2 py-1 bg-success text-black fw-semibold rounded-2';
+            badge.style.fontSize = '0.7rem';
+            badge.style.opacity = '0.85';
+            badge.textContent = 'Watched';
+            card.querySelector('.card')?.appendChild(badge);
+        }
+        fragment.appendChild(card);
     });
     feed.appendChild(fragment);
+}
+
+function sortGenreItems(items, mode) {
+    if (!Array.isArray(items)) return [];
+    const safeMode = mode || 'name';
+    // Normalize title (prefer seriesTitle when present) for name sort
+    const getTitle = (v) => (v.seriesTitle && typeof v.seriesTitle === 'string' && v.seriesTitle.trim().length > 0)
+        ? v.seriesTitle.trim()
+        : (v.title || '').trim();
+    if (safeMode === 'popularity') {
+        return [...items].sort((a, b) => {
+            const la = Number(a.likes) || 0;
+            const lb = Number(b.likes) || 0;
+            if (lb !== la) return lb - la; // desc likes
+            const ra = Number(a.rating) || 0;
+            const rb = Number(b.rating) || 0;
+            if (rb !== ra) return rb - ra; // desc rating
+            return getTitle(a).localeCompare(getTitle(b), undefined, { sensitivity: 'accent', numeric: true });
+        });
+    }
+    if (safeMode === 'rating') {
+        return [...items].sort((a, b) => {
+            const ra = Number(a.rating) || 0;
+            const rb = Number(b.rating) || 0;
+            if (rb !== ra) return rb - ra; // desc rating
+            const la = Number(a.likes) || 0;
+            const lb = Number(b.likes) || 0;
+            if (lb !== la) return lb - la; // desc likes tie-break
+            return getTitle(a).localeCompare(getTitle(b), undefined, { sensitivity: 'accent', numeric: true });
+        });
+    }
+    return [...items].sort((a, b) => {
+        const ta = getTitle(a).toLowerCase();
+        const tb = getTitle(b).toLowerCase();
+        if (ta < tb) return -1;
+        if (ta > tb) return 1;
+        const la = Number(a.likes) || 0;
+        const lb = Number(b.likes) || 0;
+        if (lb !== la) return lb - la; // keep higher liked first on identical names
+        const ra = Number(a.rating) || 0;
+        const rb = Number(b.rating) || 0;
+        if (rb !== ra) return rb - ra;
+        return 0;
+    });
 }
 
 function setLoadingState(active) {
@@ -425,7 +588,7 @@ async function goToNextEpisode() {
             throw new Error('No next episode available');
         }
 
-        const data = await response.json();
+    const data = await response.json();
         if (data?.video) {
             await openVideoModal(data.video);
             return;
@@ -577,6 +740,8 @@ async function fetchCatalogPage() {
     }
     
     isLoading = true;
+    // Enforce visibility rules every request start to avoid stray UI
+    try { updateHeaderActionsVisibility(); } catch (_) {}
     
     // Don't show loading elements during search
     if (!activeSearchTerm || !activeSearchTerm.trim()) {
@@ -604,8 +769,27 @@ async function fetchCatalogPage() {
     // Add category identifier to track request origin
     params.set('requestCategory', requestCategory);
 
+    // Add watchedOnly when on a genre category
+    if (activeSortBy && activeSortBy.startsWith('genre:') && watchedOnly) {
+        params.set('watchedOnly', '1');
+    }
+    // Add genre sort when on a genre category
+    if (activeSortBy && activeSortBy.startsWith('genre:')) {
+        params.set('genreSort', genreSort);
+    }
+
     try {
-        const response = await fetch(`/catalog/data?${params.toString()}`);
+        // If watchedOnly for genre, ensure watched sets are loaded before fetching
+        if (activeSortBy && activeSortBy.startsWith('genre:') && watchedOnly) {
+            const { selectedProfileId } = profileData;
+            const genre = activeSortBy.replace('genre:', '');
+            await loadWatchedSetsForGenre(selectedProfileId, genre);
+        }
+        if (activeSortBy && activeSortBy.startsWith('genre:')) {
+            params.set('_', String(Date.now()));
+        }
+        const url = `/catalog/data?${params.toString()}`;
+        const response = await fetch(url);
         
         // Check if this request is still valid BEFORE processing response
         if (requestId !== currentRequestId) {
@@ -645,7 +829,8 @@ async function fetchCatalogPage() {
             return;
         }
         
-        updateLikedIds(data.likedContent);
+    updateLikedIds(data.likedContent);
+    try { updateHeaderActionsVisibility(); } catch (_) {}
         const waitTime = Math.max(0, MINIMUM_LOADER_DURATION_MS);
         if (!isFirstBatch && waitTime > 0) {
             await loadingTime(waitTime);
@@ -658,8 +843,24 @@ async function fetchCatalogPage() {
             return;
         }
         
-        const catalogItems = Array.isArray(data.catalog) ? data.catalog : [];
-        appendVideos(catalogItems);
+    let originalItems = Array.isArray(data.catalog) ? data.catalog : [];
+    const originalCount = originalItems.length;
+    let catalogItems = applyWatchedFilterIfNeeded(originalItems, profileData.selectedProfileId, activeSortBy);
+    if (activeSortBy && activeSortBy.startsWith('genre:')) {
+        catalogItems = sortGenreItems(catalogItems, genreSort);
+    }
+    appendVideos(catalogItems);
+    // Watched-only empty state message
+    if (activeSortBy && activeSortBy.startsWith('genre:') && watchedOnly) {
+        const genreName = activeSortBy.replace('genre:', '');
+        if (isFirstBatch && catalogItems.length === 0) {
+            try { window.showWatchedEmptyMessage ? window.showWatchedEmptyMessage(genreName) : null; } catch (_) {}
+        } else if (catalogItems.length > 0) {
+            try { window.hideWatchedEmptyMessage ? window.hideWatchedEmptyMessage() : null; } catch (_) {}
+        }
+    } else {
+        try { window.hideWatchedEmptyMessage ? window.hideWatchedEmptyMessage() : null; } catch (_) {}
+    }
 
         // Clear Most Popular section if we're searching (it will be recreated below if there are matching results)
         if (activeSearchTerm && activeSearchTerm.trim()) {
@@ -693,7 +894,7 @@ async function fetchCatalogPage() {
                 // Home category: Handle Continue Watching section
                 const pageHeader = document.getElementById('pageHeader');
                 if (pageHeader) {
-                    // Hide pageHeader if there are no Continue Watching results
+                    // During search: show only if there are Continue Watching results
                     pageHeader.style.display = catalogItems.length > 0 ? 'block' : 'none';
                 }
                 
@@ -714,15 +915,23 @@ async function fetchCatalogPage() {
             if (activeSortBy === 'home') {
                 window.continueWatchingResultsCount = catalogItems.length;
                 window.genreSectionsResultsCount = 0; // Will be set by genre sections
+                // Outside of search: show header only if there are items in Continue Watching
+                const pageHeader = document.getElementById('pageHeader');
+                if (pageHeader) {
+                    const continueWatchingHasItems = catalogItems.length > 0;
+                    pageHeader.style.display = continueWatchingHasItems ? 'block' : 'none';
+                }
             } else {
                 window.mainResultsCount = catalogItems.length;
             }
             hideNoResultsMessage();
         }
 
-        nextOffset += catalogItems.length;
-        const totalFromResponse = Number(data.total);
-        totalItems = Number.isFinite(totalFromResponse) ? totalFromResponse : totalItems;
+    // Advance pagination based on server-returned count to avoid infinite loop when client filters everything out
+    const totalFromResponse = Number(data.total);
+    const respOffset = Number.isFinite(Number(data.offset)) ? Number(data.offset) : expectedOffset;
+    nextOffset = Math.max(nextOffset, respOffset + originalCount);
+    totalItems = Number.isFinite(totalFromResponse) ? totalFromResponse : totalItems;
         isFirstBatch = false;
         isLoading = false;
 
@@ -818,22 +1027,73 @@ function resetFeedForSort() {
     }
 }
 
-async function setSortBy(sortBy) {
-    if (activeSortBy !== sortBy) {
+async function setSortBy(sortBy, forceReload = false) {
+    if (activeSortBy !== sortBy || forceReload) {
+        const previousSort = activeSortBy;
         activeSortBy = sortBy;
-        
-        // Update page header based on category
-        const pageHeader = document.getElementById('pageHeader');
-        if (pageHeader) {
-            // Always show the header when switching categories (not during search)
-            pageHeader.style.display = 'block';
-            if (sortBy === 'home') {
-                pageHeader.textContent = 'Continue Watching';
-            } else if (sortBy.startsWith('genre:')) {
-                const genre = sortBy.replace('genre:', '');
-                pageHeader.textContent = genre;
+        // Reset watched-only toggle when switching to a different genre
+        if (watchedToggle) {
+            const wasGenre = previousSort.startsWith('genre:');
+            const isGenre = activeSortBy.startsWith('genre:');
+            const prevGenreName = wasGenre ? previousSort.slice(6) : null;
+            const newGenreName = isGenre ? activeSortBy.slice(6) : null;
+            if (!isGenre) {
+                // Leaving genre view -> clear
+                watchedOnly = false;
+                watchedToggle.checked = false;
+                try { hideWatchedEmptyMessage(); } catch (_) {}
+                // Hide genre sort UI when leaving genre
+                if (genreSortContainer) genreSortContainer.style.display = 'none';
+                // Reset dropdown label
+                try {
+                    const sortLabel = document.getElementById('genreSortLabel');
+                    const sortDropdown = document.getElementById('genreSortDropdown');
+                    if (sortLabel) sortLabel.textContent = 'Name';
+                    if (sortDropdown) {
+                        sortDropdown.querySelectorAll('.dropdown-item').forEach((i) => {
+                            i.classList.toggle('active', i.getAttribute('data-value') === 'name');
+                        });
+                    }
+                } catch (_) {}
+            } else if (wasGenre && prevGenreName !== newGenreName) {
+                // Switching between different genres
+                watchedOnly = false;
+                watchedToggle.checked = false;
+                try { hideWatchedEmptyMessage(); } catch (_) {}
+                // Reset genre sort to default when entering a new genre
+                genreSort = 'name';
+                if (genreSortSelect) genreSortSelect.value = 'name';
+                if (genreSortContainer) genreSortContainer.style.display = '';
+                try {
+                    const sortLabel = document.getElementById('genreSortLabel');
+                    const sortDropdown = document.getElementById('genreSortDropdown');
+                    if (sortLabel) sortLabel.textContent = 'Name';
+                    if (sortDropdown) {
+                        sortDropdown.querySelectorAll('.dropdown-item').forEach((i) => {
+                            i.classList.toggle('active', i.getAttribute('data-value') === 'name');
+                        });
+                    }
+                } catch (_) {}
+            } else if (!wasGenre && isGenre) {
+                // Entering genre from home or other category: reset to default and show
+                genreSort = 'name';
+                if (genreSortSelect) genreSortSelect.value = 'name';
+                if (genreSortContainer) genreSortContainer.style.display = '';
+                try {
+                    const sortLabel = document.getElementById('genreSortLabel');
+                    const sortDropdown = document.getElementById('genreSortDropdown');
+                    if (sortLabel) sortLabel.textContent = 'Name';
+                    if (sortDropdown) {
+                        sortDropdown.querySelectorAll('.dropdown-item').forEach((i) => {
+                            i.classList.toggle('active', i.getAttribute('data-value') === 'name');
+                        });
+                    }
+                } catch (_) {}
             }
         }
+        
+        // Single-source visibility update
+        updateHeaderActionsVisibility();
         
         // Close search when switching categories
         if (activeSearchTerm || (searchInput && searchInput.classList.contains('active'))) {
@@ -879,40 +1139,58 @@ async function setSortBy(sortBy) {
             // Add category identifier to track request origin
             params.set('requestCategory', activeSortBy);
 
-            const response = await fetch(`/catalog/data?${params.toString()}`);
-            if (response.ok) {
-                const data = await response.json();
-                
-                // Check if response matches current category (drop stale responses)
-                if (data.requestCategory && data.requestCategory !== activeSortBy) {
-                    return;
-                }
-                
-                // Atomically replace content to prevent stutter
-                feed.innerHTML = '';
-                updateLikedIds(data.likedContent);
-                appendVideos(data.catalog || []);
-
-                // Reset pagination state for new sort
-                const itemsLoaded = (data.catalog || []).length;
-                nextOffset = itemsLoaded;
-                const totalFromResponse = Number(data.total);
-                totalItems = Number.isFinite(totalFromResponse) ? totalFromResponse : Infinity;
-                isFirstBatch = false;
-                
-                // Disable infinite scroll if we've loaded all available items
-                if (nextOffset >= totalItems) {
-                    sentinel?.classList.add('hidden');
-                    if (observer && sentinel) {
-                        observer.unobserve(sentinel);
-                    }
-                } else {
-                    sentinel?.classList.remove('hidden');
-                }
-            } else {
-                throw new Error('Failed to load catalog with new sort');
+            // Add watchedOnly when on a genre category
+            const isGenre = activeSortBy && activeSortBy.startsWith('genre:');
+            const genreName = isGenre ? activeSortBy.replace('genre:', '') : null;
+            if (isGenre && watchedOnly) {
+                // Preload watched sets before issuing catalog request to ensure cache.loaded is true
+                try {
+                    await loadWatchedSetsForGenre(profileData.selectedProfileId, genreName);
+                } catch (_) {}
+                params.set('watchedOnly', '1');
             }
-            
+            // Add genre sort when on a genre category
+            if (isGenre) {
+                params.set('genreSort', genreSort);
+            }
+
+            if (isGenre) {
+                params.set('_', String(Date.now()));
+            }
+            const url = `/catalog/data?${params.toString()}`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Failed to load catalog with new sort');
+            const data = await response.json();
+            if (data.requestCategory && data.requestCategory !== activeSortBy) return;
+
+            // Replace content atomically
+            feed.innerHTML = '';
+            updateLikedIds(data.likedContent);
+            const originalItems = Array.isArray(data.catalog) ? data.catalog : [];
+            const originalCount = originalItems.length;
+            let catalogItems = applyWatchedFilterIfNeeded(originalItems, profileData.selectedProfileId, activeSortBy);
+            if (isGenre) catalogItems = sortGenreItems(catalogItems, genreSort);
+            appendVideos(catalogItems);
+
+            if (isGenre && watchedOnly) {
+                if (catalogItems.length === 0) { try { showWatchedEmptyMessage(genreName); } catch (_) {} }
+                else { try { hideWatchedEmptyMessage(); } catch (_) {} }
+            } else { try { hideWatchedEmptyMessage(); } catch (_) {} }
+
+            if (!isGenre) {
+                const pageHeader = document.getElementById('pageHeader');
+                if (pageHeader) pageHeader.style.display = catalogItems.length > 0 ? 'block' : 'none';
+                window.continueWatchingResultsCount = catalogItems.length;
+            }
+
+            nextOffset = originalCount;
+            const totalFromResponse = Number(data.total);
+            totalItems = Number.isFinite(totalFromResponse) ? totalFromResponse : Infinity;
+            isFirstBatch = false;
+            if (nextOffset >= totalItems) {
+                sentinel?.classList.add('hidden');
+                if (observer && sentinel) observer.unobserve(sentinel);
+            } else sentinel?.classList.remove('hidden');
         } catch (error) {
             console.error('Error in setSortBy:', error);
         } finally {
@@ -924,6 +1202,61 @@ async function setSortBy(sortBy) {
 
 // Make setSortBy available globally for genre title clicks
 window.setSortBy = setSortBy;
+
+// Initialize watched-only toggle events
+document.addEventListener('DOMContentLoaded', () => {
+    if (watchedToggle) {
+        watchedToggle.addEventListener('change', () => {
+            watchedOnly = watchedToggle.checked;
+            if (!watchedOnly) {
+                try { hideWatchedEmptyMessage(); } catch (_) {}
+            }
+            // When toggling inside a genre, clear and immediately refetch with current category
+            if (activeSortBy && activeSortBy.startsWith('genre:')) {
+                // Reset feed and re-observe sentinel for proper infinite scroll
+                resetFeedForSort();
+                // Force reload current category so server applies watchedOnly filter
+                setSortBy(activeSortBy, true);
+            }
+        });
+    }
+    if (genreSortSelect) {
+        genreSortSelect.addEventListener('change', () => {
+            const newVal = genreSortSelect.value || 'name';
+            if (newVal !== genreSort) {
+                genreSort = newVal;
+                if (activeSortBy && activeSortBy.startsWith('genre:')) {
+                    resetFeedForSort();
+                    setSortBy(activeSortBy, true);
+                }
+            }
+        });
+    }
+
+    try {
+        const sortDropdown = document.getElementById('genreSortDropdown');
+        const sortLabel = document.getElementById('genreSortLabel');
+        if (sortDropdown && genreSortSelect) {
+            const items = sortDropdown.querySelectorAll('.dropdown-item');
+            items.forEach((item) => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const val = item.getAttribute('data-value');
+                    if (!val) return;
+                    if (genreSortSelect.value !== val) {
+                        genreSortSelect.value = val;
+                        const evt = new Event('change', { bubbles: true });
+                        genreSortSelect.dispatchEvent(evt);
+                    }
+                    // Update label and active state
+                    if (sortLabel) sortLabel.textContent = item.textContent.trim();
+                    items.forEach((i) => i.classList.remove('active'));
+                    item.classList.add('active');
+                });
+            });
+        }
+    } catch (_) {}
+});
 
 function openSearch() {
     if (!searchInput) return;
@@ -955,13 +1288,6 @@ function closeSearch() {
     // Remove class to re-enable magnifying glass
     document.body.classList.remove('search-active');
     
-    // Show pageHeader and hide no-results message when search is cleared
-    if (activeSortBy === 'home') {
-        const pageHeader = document.getElementById('pageHeader');
-        if (pageHeader) {
-            pageHeader.style.display = 'block';
-        }
-    }
     hideNoResultsMessage();
     
     resetFeed();
@@ -1029,6 +1355,43 @@ function hideNoResultsMessage() {
     }
 }
 
+// Watched-only empty state helpers
+function showWatchedEmptyMessage(genre) {
+    try {
+        hideWatchedEmptyMessage();
+        const mainElement = document.querySelector('main.container-xxl') || document.querySelector('main');
+        if (!mainElement) return;
+        const headerElement = mainElement.querySelector('header');
+        const messageDiv = document.createElement('div');
+        messageDiv.id = 'watched-empty-message';
+        messageDiv.className = 'text-center mt-5 mb-5';
+        const genreText = genre ? ` in ${genre}` : '';
+        messageDiv.innerHTML = `
+            <div class="text-white-50">
+                <i class=\"bi bi-eye-slash mb-3\" style=\"font-size: 3rem;\"></i>
+                <h3 class=\"h5 mb-2\">No watched items${genreText} yet</h3>
+                <p class=\"mb-0\">Turn off &quot;Watched only&quot; to browse all titles</p>
+            </div>
+        `;
+        if (headerElement) {
+            headerElement.insertAdjacentElement('afterend', messageDiv);
+        } else {
+            mainElement.prepend(messageDiv);
+        }
+    } catch (error) {
+        console.error('Error showing watched empty message:', error);
+    }
+}
+
+function hideWatchedEmptyMessage() {
+    try {
+        const existing = document.getElementById('watched-empty-message');
+        if (existing && existing.parentNode) existing.remove();
+    } catch (error) {
+        console.error('Error hiding watched empty message:', error);
+    }
+}
+
 function checkAndShowNoResults(searchTerm, category = null) {
     // Only check during active search
     if (!searchTerm || !searchTerm.trim()) {
@@ -1075,14 +1438,7 @@ function debouncedSearch(searchTerm) {
             try {
                 activeSearchTerm = searchTerm;
                 
-                // Show pageHeader and hide no-results message when search is cleared
                 if (!activeSearchTerm) {
-                    if (activeSortBy === 'home') {
-                        const pageHeader = document.getElementById('pageHeader');
-                        if (pageHeader) {
-                            pageHeader.style.display = 'block';
-                        }
-                    }
                     hideNoResultsMessage();
                 }
                 
@@ -1108,13 +1464,6 @@ function handleSearchInput(event) {
         }
         
         activeSearchTerm = '';
-        
-        if (activeSortBy === 'home') {
-            const pageHeader = document.getElementById('pageHeader');
-            if (pageHeader) {
-                pageHeader.style.display = 'block';
-            }
-        }
         hideNoResultsMessage();
         
         resetFeed();
@@ -1549,18 +1898,26 @@ function setupModalEvents() {
 
 function setupSignOut() {
     const signOut = document.getElementById('signOutLink') || Array.from(document.querySelectorAll('.dropdown-menu a')).find((a) => a.textContent.trim().toLowerCase() === 'sign out');
-    if (signOut) {
-        signOut.addEventListener('click', (e) => {
-            e.preventDefault();
-            try {
-                localStorage.removeItem('selectedProfileId');
-                localStorage.removeItem('selectedProfileName');
-            } catch (err) {
-                console.warn('Unable to clear profile selection', err);
+    if (!signOut) return;
+    signOut.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+            localStorage.removeItem('selectedProfileId');
+            localStorage.removeItem('selectedProfileName');
+        } catch (err) {
+            console.warn('Unable to clear profile selection', err);
+        }
+        try {
+            const resp = await fetch('/logout', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+            if (!resp.ok) {
+                console.warn('Logout request failed', resp.status);
             }
-            window.location.replace('/');
-        });
-    }
+        } catch (err) {
+            console.warn('Logout network error', err);
+        } finally {
+            window.location.replace('/login');
+        }
+    });
 }
 
 // ------------------------- Event Wiring -------------------------
@@ -1571,10 +1928,22 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    // Ensure Home defaults (no genre UI)
+    try { updateHeaderActionsVisibility(); } catch (_) {}
+
     setupModalEvents();
     setupSignOut();
     initializeObserver();
     fetchCatalogPage();
+
+    // Ensure sort UI is hidden on initial Home load
+    try {
+        if (!activeSortBy || activeSortBy === 'home' || !activeSortBy.startsWith('genre:')) {
+            if (headerActions) headerActions.style.display = 'none';
+            if (genreSortContainer) genreSortContainer.style.display = 'none';
+            if (genreSortSelect) genreSortSelect.disabled = true;
+        }
+    } catch (_) {}
 
     // Add click handler to feed for Continue Watching section
     feed.addEventListener('click', handleFeedClick);

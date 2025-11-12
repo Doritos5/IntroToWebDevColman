@@ -1,5 +1,5 @@
 const dotenv = require('dotenv');
-const r = dotenv.config();
+dotenv.config();
 const path = require('path');
 const express = require('express');
 const session = require('express-session');
@@ -15,19 +15,20 @@ const catalogRoutes = require('./src/routes/catalogRoutes');
 const profileRoutes = require('./src/routes/profileRoutes');
 const likeRoutes = require('./src/routes/likeRoutes');
 const analyticsRoutes = require('./src/routes/analyticsRoutes');
+
+const contentRoutes = require('./src/routes/contentRoutes');
 const { logger } = require("./src/middleware/logger");
 const { connectToDatabase } = require('./src/utils/db');
 
 const app = express();
 const PORT = process.env.PORT || 5555;
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 const publicPath = path.join(__dirname, 'src', 'public')
 
 app.use(express.static(publicPath));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 const cookieParser = require("cookie-parser");
 
 app.use(cookieParser());
@@ -72,6 +73,7 @@ app.get('/settings/manage-profiles', async (req, res, next) => {
     next(err);
   }
 });
+app.use('/', contentRoutes);
 
 async function startServer() {
     try {

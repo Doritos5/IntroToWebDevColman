@@ -236,19 +236,6 @@ main {
 
 .navbar .nav-greeting {
     display: inline-block;
-    margin-top: 0; /* override page-level banner spacing */
-    background: transparent;
-    border-bottom: none;
-    padding: .15rem .5rem;
-    color: rgba(255,255,255,0.95);
-    font-weight: 600;
-    font-size: 0.95rem;
-    line-height: 1;
-    vertical-align: middle;
-}
-
-.navbar .nav-greeting {
-    display: inline-block;
     flex: 0 0 auto;
     white-space: nowrap;
     max-width: none;
@@ -983,10 +970,6 @@ main {
     50% { transform: scale(1.05); opacity: 0.1; }
 }
 
-.clickable-genre-title:hover::after {
-    width: 100%;
-}
-
 /* --- Settings submenu placement --- */
 .dropdown-submenu { position: relative; }
 
@@ -1016,4 +999,164 @@ main {
     top: 100%;
   }
 }
+/* ---- Scrollable Genres Strip (navbar middle) ---- */
+.genres-viewport {
+    min-width: 0;
+    position: relative; /* for the fade edges */
+}
 
+.genres-strip {
+    /* keep items on one line and allow horizontal scroll */
+    white-space: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    gap: .25rem;
+    padding-left: 0;
+    margin-left: 0 !important;
+}
+
+.genres-strip .nav-link {
+    padding-left: .5rem;
+    padding-right: .5rem;
+}
+
+/* show a thin scrollbar */
+.genres-strip::-webkit-scrollbar { height: 6px; }
+.genres-strip::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,.25);
+    border-radius: 3px;
+}
+.genres-strip::-webkit-scrollbar-track { background: transparent; }
+
+/* right utilities cluster should never shrink */
+.navbar-utils { flex-shrink: 0; }
+
+/* subtle edge fades to hint more content */
+.genres-viewport::before,
+.genres-viewport::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 24px;
+    pointer-events: none;
+}
+.genres-viewport::before {
+    left: 0;
+    background: linear-gradient(to right, rgba(0,0,0,.7), transparent);
+}
+.genres-viewport::after {
+    right: 0;
+    background: linear-gradient(to left, rgba(0,0,0,.7), transparent);
+}
+
+/* ------------------------- Watched-only Toggle ------------------------- */
+#watchedToggleContainer {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+#watchedToggleContainer .form-check-input {
+    cursor: pointer;
+    border-color: rgba(229, 9, 20, 0.5);
+    background-color: rgba(255, 255, 255, 0.16);
+    --bs-form-switch-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
+    transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+/* Checked state */
+#watchedToggleContainer .form-check-input:checked {
+    background-color: #e50914;
+    border-color: #e50914;
+    box-shadow: 0 0 0 .15rem rgba(229, 9, 20, 0.25);
+}
+
+/* Focus ring */
+#watchedToggleContainer .form-check-input:focus {
+    box-shadow: 0 0 0 .2rem rgba(229, 9, 20, 0.35);
+    border-color: #e50914;
+}
+
+/* Hover accent */
+#watchedToggleContainer .form-check-input:hover {
+    border-color: #e50914;
+}
+
+/* Label hover */
+#watchedToggleContainer .form-check-label {
+    transition: color .15s ease;
+}
+#watchedToggleContainer:hover .form-check-label {
+    color: rgba(255,255,255,0.85) !important;
+}
+
+/* ------------------------- Sort-by Select ------------------------- */
+#genreSortContainer .form-select {
+    cursor: pointer;
+    transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+#genreSortContainer .form-select:hover {
+    border-color: #e50914 !important;
+}
+#genreSortContainer .form-select:focus {
+    border-color: #e50914 !important;
+    box-shadow: 0 0 0 .2rem rgba(229, 9, 20, 0.35) !important;
+    outline: 0;
+}
+
+#genreSortContainer .form-select option,
+#genreSortContainer .form-select optgroup {
+    background-color: #141414;
+    color: #fff;
+}
+#genreSortContainer .form-select option:hover {
+    background-color: #b00610;
+    color: #fff;
+}
+#genreSortContainer .form-select option:checked,
+#genreSortContainer .form-select option:focus {
+    background-color: #1f1f1f;
+    color: #fff;
+}
+
+/* Custom dropdown for Sort by */
+#genreSortDropdown .dropdown-menu-dark {
+    background-color: #141414;
+    border: 1px solid #2c2c2c;
+    min-width: 11rem;
+    padding-top: .25rem;
+    padding-bottom: .25rem;
+}
+#genreSortDropdown .dropdown-item {
+    font-size: 0.8rem;
+    color: #ddd;
+    transition: background-color .15s ease, color .15s ease;
+}
+#genreSortDropdown .dropdown-item.active,
+#genreSortDropdown .dropdown-item:active {
+    background-color: #e50914 !important;
+    color: #fff !important;
+}
+#genreSortDropdown .dropdown-item:hover {
+    background-color: #b00610;
+    color: #fff;
+}
+#genreSortDropdown .dropdown-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    background-color: #141414;
+    border: 1px solid #2c2c2c;
+    box-shadow: 0 0 0 .15rem rgba(0,0,0,0.4);
+    transition: border-color .15s ease, box-shadow .15s ease, color .15s ease;
+}
+#genreSortDropdown .dropdown-toggle:hover,
+#genreSortDropdown .dropdown-toggle:focus {
+    border-color: #e50914;
+    box-shadow: 0 0 0 .2rem rgba(229, 9, 20, 0.35);
+    color: #fff !important;
+}
+#genreSortDropdown .dropdown-toggle:active {
+    background-color: #1f1f1f;
+}
