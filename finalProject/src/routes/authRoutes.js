@@ -34,7 +34,11 @@ router.get('/profiles_page', ensureAuth, (req, res, next) => {
     res.render('profilePage');
 });
 
-router.get('/settings/manage-profiles', (req, res) => res.redirect(301, '/settings/configuration'));
-\router.get('/settings/configuration', ensureAuth, renderSettingsPage);
-router.get('/settings', (req, res) => res.redirect(301, '/settings/configuration'));
+router.get('/settings/manage-profiles', (req, res) => {
+    return res.redirect(301, '/settings/configuration');
+});
+router.get('/settings/configuration', ensureAuth, renderSettingsPage);
+router.get('/settings', (req, res) => {
+    return res.redirect(301, '/settings/configuration');
+});
 module.exports = router;
