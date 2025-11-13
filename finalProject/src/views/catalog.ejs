@@ -66,14 +66,25 @@
                     </div>
                     <% } %>
 
-                        <div class="dropdown ms-2">
+                        <div class="dropdown ms-2" data-bs-auto-close="outside">
                             <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle"
                                 id="avatarMenu" data-bs-toggle="dropdown">
                                 <img src="/images/netflix_profile.jpg" alt="User" class="rounded user-avatar">
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end text-small shadow">
                                 <li><a class="dropdown-item" href="/profiles_page">Change profile</a></li>
-                                <li><a class="dropdown-item" href="/settings">Settings</a></li>
+                                <li class="has-submenu">
+                                    <a href="#" class="dropdown-item submenu-toggle">Settings ▸</a>
+                                    <ul class="submenu">
+                                        <a class="dropdown-item" href="/settings/configuration">Configuration</a>
+                                        <li>
+                                            <a class="dropdown-item"
+                                                href="/settings/analytics<% if (typeof profileId !== 'undefined') { %>?profileId=<%= profileId %><% } %>">
+                                                Analytics
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
@@ -590,6 +601,25 @@
                 }
             });
         })();
+
+        // Settings submenu toggle functionality
+        document.querySelectorAll('.submenu-toggle').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation(); 
+                const item = e.currentTarget.closest('.has-submenu');
+                item.classList.toggle('open');
+            });
+        });
+
+        document.querySelectorAll('.dropdown-menu').forEach(function (menu) {
+            menu.addEventListener('click', function (e) {
+                const openItem = menu.querySelector('.has-submenu.open');
+                if (openItem && !e.target.closest('.has-submenu')) {
+                    openItem.classList.remove('open');
+                }
+            });
+        });
     </script>
 </body>
 
