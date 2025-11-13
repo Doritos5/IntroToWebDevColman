@@ -14,6 +14,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const catalogRoutes = require('./src/routes/catalogRoutes');
 const profileRoutes = require('./src/routes/profileRoutes');
 const likeRoutes = require('./src/routes/likeRoutes');
+const recommendationRoutes = require('./src/routes/recommendationRoutes');
 const analyticsRoutes = require('./src/routes/analyticsRoutes');
 
 const contentRoutes = require('./src/routes/contentRoutes');
@@ -59,6 +60,7 @@ app.use('/profiles', profileRoutes);
 app.use('/likes', likeRoutes);
 app.use('/settings/analytics', analyticsRoutes);
 app.use('/', contentRoutes);
+app.use('/api', recommendationRoutes);
 
 // 404 forwarder to centralized error handler
 app.use((req, res, next) => {

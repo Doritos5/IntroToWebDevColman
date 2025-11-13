@@ -11,7 +11,7 @@ const viewingSessionSchema = new mongoose.Schema({
 });
 
 viewingSessionSchema.index({ userEmail: 1, profileId: 1, videoId: 1 }, { unique: true });
-
+viewingSessionSchema.index({ userEmail: 1, profileId: 1, updatedAt: -1 });
 const ViewingSession = mongoose.models.ViewingSession || mongoose.model('ViewingSession', viewingSessionSchema);
 
 async function updateProgress({ userEmail, profileId, videoId, positionSeconds, durationSeconds }) {
