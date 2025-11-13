@@ -74,18 +74,27 @@ exports.getRecommendations = async function getRecommendations(req, res) {
     const topWatchedGenres = topN(genreCounterWatched, 6);
     const combinedGenres = [...new Set([...topLikedGenres, ...topWatchedGenres])];
 
-    const excludeIds = new Set([...likedIds.map(String), ...watchedIds.map(String)]);
+    // Only exclude liked items
+    const excludeIds = new Set([...likedIds.map(String)]);
 
     const baseFilter = combinedGenres.length ? { genres: { $in: combinedGenres } } : {};
     const candidates = await Video.find(baseFilter)
-      .select({ title: 1, genres: 1, likes: 1, poster: 1, year: 1, type: 1, series: 1, episodeNumber: 1 })
+      .select({ title: 1, genres: 1, likes: 1, rating: 1, poster: 1, year: 1, type: 1, series: 1, episodeNumber: 1, description: 1 })
+      .sort({ episodeNumber: 1 }) // Sort so we can pick first episode per series
       .lean({ virtuals: true });
+
+    // Get series episode preferences (last watched episode per series)
+    const { getSeriesEpisodePreferenceMap, applySeriesEpisodePreferences } = require('../models/catalogModel');
+    const preferenceMap = await getSeriesEpisodePreferenceMap(profileId);
+
+    // Apply series deduplication - keep only one episode per series
+    const deduplicatedCandidates = await applySeriesEpisodePreferences(candidates, preferenceMap);
 
     const likedSet = new Set(topLikedGenres);
     const watchedSet = new Set(topWatchedGenres);
 
     const scored = [];
-    for (const v of candidates) {
+    for (const v of deduplicatedCandidates) {
       if (!v._id) continue;
       if (excludeIds.has(String(v._id))) continue;
 
@@ -99,14 +108,21 @@ exports.getRecommendations = async function getRecommendations(req, res) {
       score += likedHits * 3;
       score += watchedHits * 2;
 
+      // Add likes score
       const likesNorm = Math.log2((Number(v.likes) || 0) + 1);
       score += likesNorm;
+
+      // Add rating score
+      const ratingScore = (Number(v.rating) || 0) / 10;
+      score += ratingScore * 2; // Weight rating slightly more than likes
 
       scored.push({ v, score });
     }
 
     scored.sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
+      // Rating first, then likes
+      if ((b.v.rating || 0) !== (a.v.rating || 0)) return (b.v.rating || 0) - (a.v.rating || 0);
       if ((b.v.likes || 0) !== (a.v.likes || 0)) return (b.v.likes || 0) - (a.v.likes || 0);
       return String(a.v.title || '').localeCompare(String(b.v.title || ''));
     });
@@ -119,15 +135,20 @@ exports.getRecommendations = async function getRecommendations(req, res) {
           title: 1,
           genres: 1,
           likes: 1,
+          rating: 1,
           poster: 1,
           year: 1,
           type: 1,
           series: 1,
-          episodeNumber: 1
+          episodeNumber: 1,
+          description: 1
         })
+        .sort({ episodeNumber: 1 })
         .lean({ virtuals: true });
 
-      items = fallbackVideos.slice(0, limit);
+      // Apply series deduplication
+      const deduplicatedFallback = await applySeriesEpisodePreferences(fallbackVideos, preferenceMap);
+      items = deduplicatedFallback.slice(0, limit);
     }
 
     return res.json({
