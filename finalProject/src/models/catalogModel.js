@@ -403,6 +403,96 @@ async function listEpisodesBySeries(seriesId, {page = 1, limit = 100} = {}) {
         };
     }
 
+/**
+ * Build a map of seriesId
+ * For each series, returns the last watched episode, or null if none watched
+ * @param {string} profileId
+ * @returns {Promise<Map<string, string>>}
+ */
+async function getSeriesEpisodePreferenceMap(profileId) {
+    if (!profileId) {
+        return new Map();
+    }
+
+    try {
+        // Get all viewing sessions for this profile
+        const sessions = await ViewingSession.find({ profileId })
+            .sort({ updatedAt: -1 })
+            .populate('videoId')
+            .lean();
+
+        const seriesMap = new Map();
+
+        for (const session of sessions) {
+            const video = session.videoId;
+            if (!video || video.type !== 'series' || !video.series) {
+                continue;
+            }
+
+            const seriesId = video.series.toString();
+            
+            // Only set if we haven't seen this series yet
+            if (!seriesMap.has(seriesId)) {
+                seriesMap.set(seriesId, video._id.toString());
+            }
+        }
+
+        return seriesMap;
+    } catch (error) {
+        console.error('Error building series episode preference map:', error);
+        return new Map();
+    }
+}
+
+async function applySeriesEpisodePreferences(videos, preferenceMap) {
+    const seen = new Map();
+    const result = [];
+
+    for (const video of videos) {
+        if (video.type === 'series' && video.series) {
+            const seriesId = video.series.toString();
+            
+            // If we already selected an episode for this series, skip
+            if (seen.has(seriesId)) {
+                continue;
+            }
+
+            const preferredVideoId = preferenceMap.get(seriesId);
+            
+            if (preferredVideoId) {
+                // We have a preference - find that specific episode in current list
+                let preferredVideo = videos.find(v => 
+                    v._id.toString() === preferredVideoId
+                );
+                
+                // If preferred episode not in current list, fetch it from DB
+                if (!preferredVideo) {
+                    try {
+                        preferredVideo = await Video.findById(preferredVideoId).lean();
+                    } catch (err) {
+                        console.error('Error fetching preferred episode:', err);
+                    }
+                }
+                
+                if (preferredVideo) {
+                    seen.set(seriesId, preferredVideo);
+                    result.push(preferredVideo);
+                    continue;
+                }
+            }
+
+            // No preference or preferred episode not found - use first episode
+            seen.set(seriesId, video);
+            result.push(video);
+        } else {
+            // It's a movie, just add it
+            result.push(video);
+        }
+    }
+
+    return result;
+}
+
 async function getContinueWatching({ profileId, offset = 0, limit = 10, search = '' } = {}) {
     try {
         // Find viewing sessions for this specific profile with actual progress
@@ -467,82 +557,52 @@ async function getContinueWatching({ profileId, offset = 0, limit = 10, search =
     }
 }
 
-async function getVideosByGenre(limit = 10) {
+async function getVideosByGenre(limit = 10, profileId = null) {
     try {
+        // Get viewing preference map if profileId provided
+        const preferenceMap = profileId ? await getSeriesEpisodePreferenceMap(profileId) : new Map();
+
         // Get all unique genres from the videos collection
         const genres = await Video.distinct('genres', { genres: { $exists: true, $ne: [] } });
 
         const genreSections = [];
 
         for (const genre of genres) {
-            // For each genre, get the newest videos (by year)
-            // For series, get only the first episode and max 1 per series
-            const videos = await Video.aggregate([
-                // 1. Match videos that have this genre
-                { $match: { genres: genre } },
+            // Get all videos for this genre, sorted by episode number
+            const allVideos = await Video.find({ genres: genre })
+                .sort({ episodeNumber: 1, year: -1 })
+                .lean();
 
-                // 2. Sort so that $first picks earliest episode for series
-                { $sort: { year: 1, episodeNumber: 1 } },
-
-                // 3. Group by series (for series) or by self (for movies)
-                {
-                    $group: {
-                        _id: {
-                            // Group by series ID for series, by video ID for movies
-                            seriesId: {
-                                $cond: [
-                                    { $eq: ['$type', 'series'] },
-                                    '$series',
-                                    '$_id'
-                                ]
-                            },
-                            type: '$type'
-                        },
-                        firstEpisode: { $first: '$$ROOT' }
-                    }
-                },
-
-                // 4. Replace root with the first episode document
-                { $replaceRoot: { newRoot: '$firstEpisode' } },
-
-                // 5. Lookup the related series document
-                {
-                    $lookup: {
-                        from: 'series',
-                        localField: 'series',
-                        foreignField: '_id',
-                        as: 'seriesDoc'
-                    }
-                },
-
-                // 6. Unwind to convert [seriesDoc] → seriesDoc (null if no series)
-                { $unwind: { path: '$seriesDoc', preserveNullAndEmptyArrays: true } },
-
-                // 7. Add seriesTitle and seriesData fields
-                {
-                    $addFields: {
-                        seriesTitle: '$seriesDoc.title',
-                    }
-                },
-
-                // 8. Sort final list by year descending
-                { $sort: { year: -1 } },
-
-                // 9. Limit to desired number of results
-                { $limit: limit },
-
-                // 10. Remove internal seriesDoc
-                {
-                    $project: {
-                        seriesDoc: 0
+            // Apply episode preferences based on viewing history
+            let selectedVideos;
+            if (preferenceMap.size > 0) {
+                selectedVideos = await applySeriesEpisodePreferences(allVideos, preferenceMap);
+            } else {
+                // No preferences - just pick first episode per series
+                const seen = new Map();
+                selectedVideos = [];
+                
+                for (const video of allVideos) {
+                    if (video.type === 'series' && video.series) {
+                        const seriesId = video.series.toString();
+                        if (!seen.has(seriesId)) {
+                            seen.set(seriesId, true);
+                            selectedVideos.push(video);
+                        }
+                    } else {
+                        selectedVideos.push(video);
                     }
                 }
-            ]);
+            }
 
-            if (videos.length > 0) {
+            // Sort by year (newest first) and limit
+            selectedVideos.sort((a, b) => (b.year || 0) - (a.year || 0));
+            const limitedVideos = selectedVideos.slice(0, limit);
+
+            if (limitedVideos.length > 0) {
                 genreSections.push({
                     genre,
-                    videos: videos.map(toClientVideo)
+                    videos: limitedVideos.map(toClientVideo)
                 });
             }
         }
@@ -574,7 +634,7 @@ async function getAllGenres() {
  * @param {Object} options - Pagination and search options
  * @returns {Promise<Object>} Paginated catalog for genre
  */
-async function getCatalogByGenre({ genre, page = 1, offset, limit = 10, search = '' }) {
+async function getCatalogByGenre({ genre, page = 1, offset, limit = 10, search = '', profileId = null }) {
     try {
         const pageNumber = Math.max(1, Number(page));
         const pageSize = Math.max(1, Number(limit));
@@ -582,74 +642,60 @@ async function getCatalogByGenre({ genre, page = 1, offset, limit = 10, search =
             ? { title: { $regex: search, $options: 'i' } }
             : {};
 
-        // Build aggregation pipeline
-        const pipeline = [
-            // Match genre and search conditions
-            {
-                $match: {
-                    genres: genre,
-                    ...searchCondition
-                }
-            },
+        // Get viewing preference map if profileId provided
+        const preferenceMap = profileId ? await getSeriesEpisodePreferenceMap(profileId) : new Map();
 
-            // Group series to get only first episodes
-            {
-                $group: {
-                    _id: {
-                        seriesId: { $ifNull: ['$series', '$_id'] },
-                        type: '$type'
-                    },
-                    doc: { $first: '$$ROOT' }
-                }
-            },
+        // Get all matching videos
+        const allVideos = await Video.find({
+            genres: genre,
+            ...searchCondition
+        })
+        .sort({ episodeNumber: 1, year: -1, title: 1 })
+        .lean();
 
-            // Replace root with the document
-            { $replaceRoot: { newRoot: '$doc' } },
-
-            // Sort by year (newest first), then by title
-            { $sort: { year: -1, title: 1 } }
-        ];
-
-        // Add pagination
-        if (offset !== undefined) {
-            const skipAmount = Math.max(0, Number(offset));
-            pipeline.push({ $skip: skipAmount });
+        // Apply episode preferences
+        let selectedVideos;
+        if (preferenceMap.size > 0) {
+            selectedVideos = await applySeriesEpisodePreferences(allVideos, preferenceMap);
         } else {
-            const skipAmount = (pageNumber - 1) * pageSize;
-            pipeline.push({ $skip: skipAmount });
+            // No preferences - pick first episode per series
+            const seen = new Map();
+            selectedVideos = [];
+            
+            for (const video of allVideos) {
+                if (video.type === 'series' && video.series) {
+                    const seriesId = video.series.toString();
+                    if (!seen.has(seriesId)) {
+                        seen.set(seriesId, true);
+                        selectedVideos.push(video);
+                    }
+                } else {
+                    selectedVideos.push(video);
+                }
+            }
         }
 
-        pipeline.push({ $limit: pageSize });
+        // Sort final results
+        selectedVideos.sort((a, b) => {
+            const yearDiff = (b.year || 0) - (a.year || 0);
+            if (yearDiff !== 0) return yearDiff;
+            return (a.title || '').localeCompare(b.title || '');
+        });
 
-        const videos = await Video.aggregate(pipeline);
+        const totalCount = selectedVideos.length;
 
-        // Get total count for pagination
-        const countPipeline = [
-            {
-                $match: {
-                    genres: genre,
-                    ...searchCondition
-                }
-            },
-            {
-                $group: {
-                    _id: {
-                        seriesId: { $ifNull: ['$series', '$_id'] },
-                        type: '$type'
-                    }
-                }
-            },
-            { $count: 'total' }
-        ];
-
-        const countResult = await Video.aggregate(countPipeline);
-        const totalCount = countResult[0]?.total || 0;
+        // Apply pagination
+        const skipAmount = offset !== undefined 
+            ? Math.max(0, Number(offset))
+            : (pageNumber - 1) * pageSize;
+        
+        const paginatedVideos = selectedVideos.slice(skipAmount, skipAmount + pageSize);
 
         return {
-            items: videos.map(toClientVideo),
+            items: paginatedVideos.map(toClientVideo),
             total: totalCount,
             page: pageNumber,
-            offset: offset !== undefined ? Math.max(0, Number(offset)) : (pageNumber - 1) * pageSize,
+            offset: skipAmount,
             limit: pageSize,
         };
     } catch (error) {
@@ -664,34 +710,43 @@ async function getCatalogByGenre({ genre, page = 1, offset, limit = 10, search =
     }
 }
 
-async function getMostPopular(limit = 10) {
+async function getMostPopular(limit = 10, profileId = null) {
     try {
-        const videos = await Video.aggregate([
-            // Sort by likes
-            { $sort: { likes: -1, episodeNumber: 1 } },
-            
-            // Group series together to get only first episode per series
-            {
-                $group: {
-                    _id: {
-                        // Group by series ID for series, by video ID for movies
-                        seriesId: { $cond: [{ $eq: ['$type', 'series'] }, '$series', '$_id'] },
-                        type: '$type'
-                    },
-                    firstEpisode: { $first: '$$ROOT' }
-                }
-            },
-            
-            { $replaceRoot: { newRoot: '$firstEpisode' } },
-            
-            // Sort by likes (descending)
-            { $sort: { likes: -1 } },
-            
-            // Limit to specified number of items
-            { $limit: limit }
-        ]);
+        // Get viewing preference map if profileId provided
+        const preferenceMap = profileId ? await getSeriesEpisodePreferenceMap(profileId) : new Map();
 
-        return videos.map(toClientVideo);
+        // Get all videos sorted by likes
+        const allVideos = await Video.find({})
+            .sort({ likes: -1, episodeNumber: 1 })
+            .lean();
+
+        // Apply episode preferences
+        let selectedVideos;
+        if (preferenceMap.size > 0) {
+            selectedVideos = await applySeriesEpisodePreferences(allVideos, preferenceMap);
+        } else {
+            // No preferences - pick first episode per series
+            const seen = new Map();
+            selectedVideos = [];
+            
+            for (const video of allVideos) {
+                if (video.type === 'series' && video.series) {
+                    const seriesId = video.series.toString();
+                    if (!seen.has(seriesId)) {
+                        seen.set(seriesId, true);
+                        selectedVideos.push(video);
+                    }
+                } else {
+                    selectedVideos.push(video);
+                }
+            }
+        }
+
+        // Sort by likes again (in case preferences changed order) and limit
+        selectedVideos.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+        const limitedVideos = selectedVideos.slice(0, limit);
+
+        return limitedVideos.map(toClientVideo);
     } catch (error) {
         console.error('Error getting most popular videos:', error);
         return [];
@@ -715,5 +770,7 @@ module.exports = {
     getAllGenres,
     getCatalogByGenre,
     getMostPopular,
+    getSeriesEpisodePreferenceMap,
+    applySeriesEpisodePreferences,
 };
 

@@ -182,11 +182,11 @@ async function getCatalogData(req, res) {
 
             // Get Most Popular section (max 10 items)
             if (!hasOffset || normalizedOffset === 0) {
-                mostPopular = await catalogModel.getMostPopular(10);
+                mostPopular = await catalogModel.getMostPopular(10, profileId);
             }
 
             // Get genre sections for home page
-            genreSections = await catalogModel.getVideosByGenre(videosPerPage || DEFAULT_PAGE_SIZE);
+            genreSections = await catalogModel.getVideosByGenre(videosPerPage || DEFAULT_PAGE_SIZE, profileId);
         } else if (sortBy.startsWith('genre:')) {
             // Genre-specific catalog
             const genre = sortBy.replace('genre:', '');
@@ -196,6 +196,7 @@ async function getCatalogData(req, res) {
                 offset: normalizedOffset,
                 limit: videosPerPage,
                 search,
+                profileId,
             });
         } else {
             // Regular catalog (including Most Popular)
