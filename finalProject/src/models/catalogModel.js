@@ -521,22 +521,46 @@ async function getContinueWatching({ profileId, offset = 0, limit = 10, search =
             };
         }
 
-        // Extract valid video objects and apply pagination
+        // Extract valid video objects
         let videoItems = viewingSessions
             .map(session => session.videoId)
             .filter(video => video && video._id);
 
+        // Deduplicate series episodes - keep only the most recent episode per series
+        const seenSeries = new Map();
+        const seenMovies = new Set();
+        const deduplicatedItems = [];
+
+        for (const video of videoItems) {
+            if (video.type === 'series' && video.series) {
+                const seriesId = video.series.toString();
+                // Only keep the first occurrence (which is the most recent due to sort)
+                if (!seenSeries.has(seriesId)) {
+                    seenSeries.set(seriesId, video);
+                    deduplicatedItems.push(video);
+                }
+            } else {
+                // It's a movie - only add if not already seen
+                const movieId = video._id.toString();
+                if (!seenMovies.has(movieId)) {
+                    seenMovies.add(movieId);
+                    deduplicatedItems.push(video);
+                }
+            }
+        }
+
         // Apply search filter if provided
+        let filteredItems = deduplicatedItems;
         if (search && search.trim()) {
             const searchLower = search.toLowerCase().trim();
-            videoItems = videoItems.filter(video => 
+            filteredItems = deduplicatedItems.filter(video => 
                 video.title && video.title.toLowerCase().includes(searchLower)
             );
         }
 
         // Apply pagination manually since we need to filter first
-        const totalFilteredItems = videoItems.length;
-        const paginatedItems = videoItems.slice(offset, offset + limit);
+        const totalFilteredItems = filteredItems.length;
+        const paginatedItems = filteredItems.slice(offset, offset + limit);
 
         return {
             items: paginatedItems.map(video => toClientVideo(video)),
