@@ -50,7 +50,6 @@ router.post('/add-content', ensureAdminRedirect, upload.single('videoFile'), asy
             genres = '',
             poster = '',
             type = 'movie',
-            seriesTitle = '',
             episodeNumber = '',
         } = req.body || {};
         // Validation & normalization
@@ -65,7 +64,6 @@ router.post('/add-content', ensureAdminRedirect, upload.single('videoFile'), asy
         const normalizedType = type === 'series' ? 'series' : 'movie';
         if (normalizedType === 'series') {
             missing.push(...[
-                required('seriesTitle', (seriesTitle || '').trim()),
                 required('episodeNumber', episodeNumber, v => Number(v) > 0)
             ].filter(Boolean));
         }
@@ -83,7 +81,7 @@ router.post('/add-content', ensureAdminRedirect, upload.single('videoFile'), asy
         let seriesId = null;
         let episodeNum = undefined;
         if (normalizedType === 'series') {
-            const sTitle = (seriesTitle || '').trim();
+            const sTitle = (title || '').trim();
             let seriesDoc = await Series.findOne({ title: sTitle }).lean();
             if (!seriesDoc) {
                 seriesDoc = await Series.create({ title: sTitle, description: '' });

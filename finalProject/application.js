@@ -26,6 +26,8 @@ const PORT = process.env.PORT || 5555;
 
 const publicPath = path.join(__dirname, 'src', 'public')
 
+app.disable('x-powered-by');
+
 app.use(express.static(publicPath));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -56,24 +58,30 @@ app.use('/catalog', catalogRoutes);
 app.use('/profiles', profileRoutes);
 app.use('/likes', likeRoutes);
 app.use('/settings/analytics', analyticsRoutes);
-
-app.get('/settings/manage-profiles', async (req, res, next) => {
-  try {
-    const db = mongoose.connection.db;
-    const profilesCollection = db.collection('profiles');
-    const allProfiles = await profilesCollection.find().toArray();
-
-    const profiles = allProfiles.map(p => ({
-      id: String(p._id),
-      displayName: p.displayName || p.name || `Profile ${p._id}`
-    }));
-
-    res.render('settings', { title: 'Manage Profiles', profiles });
-  } catch (err) {
-    next(err);
-  }
-});
 app.use('/', contentRoutes);
+
+// 404 forwarder to centralized error handler
+app.use((req, res, next) => {
+    const err = new Error('Not Found');
+    err.status = 404;
+    next(err);
+});
+
+// Centralized error handler
+app.use((err, req, res, next) => {
+    const status = err.status || 500;
+    const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest' || req.accepts('json');
+    const isProd = process.env.NODE_ENV === 'production';
+    const body = isProd
+        ? { message: status === 404 ? 'Not found' : 'Internal server error' }
+        : { message: err.message || 'Error', stack: err.stack };
+
+    if (isAjax) {
+        res.status(status).json(body);
+    } else {
+        res.status(status).type('text/plain').send(body.message || 'Error');
+    }
+});
 
 async function startServer() {
     try {
