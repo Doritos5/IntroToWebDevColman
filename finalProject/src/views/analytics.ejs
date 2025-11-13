@@ -87,7 +87,7 @@
 
 <body class="navbar-page">
     <!-- Back button -->
-    <a href="/catalog/?profileId=<%= profileId %>" class="back-btn">
+    <a href="/catalog/<% if (profileId) { %>?profileId=<%= profileId %><% } %>" class="back-btn">
         <i class="bi bi-arrow-left"></i> Back
     </a>
 
@@ -186,6 +186,25 @@
                             color: '#ffffff',
                             font: { size: 10 }
                         }
+                    }
+                }
+            }
+        });
+
+        // Get profileId from localStorage if not in URL
+        document.addEventListener('DOMContentLoaded', function() {
+            const backBtn = document.querySelector('.back-btn');
+            if (backBtn) {
+                const currentHref = backBtn.getAttribute('href');
+                // If profileId is missing or empty in the URL
+                if (!currentHref.includes('profileId=') || currentHref.endsWith('profileId=')) {
+                    const storedProfileId = localStorage.getItem('selectedProfileId');
+                    if (storedProfileId) {
+                        // Replace or add profileId parameter
+                        const newHref = currentHref.includes('?') 
+                            ? `/catalog/?profileId=${encodeURIComponent(storedProfileId)}`
+                            : `/catalog/?profileId=${encodeURIComponent(storedProfileId)}`;
+                        backBtn.setAttribute('href', newHref);
                     }
                 }
             }
