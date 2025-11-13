@@ -541,8 +541,22 @@
                     });
                     if (!res.ok) return;
                     const data = await res.json();
-                    const items = Array.isArray(data.items) ? data.items : [];
-                    if (!items.length) return;
+                    let items = Array.isArray(data.items) ? data.items : [];
+                    
+                    // Filter recommendations based on active search term
+                    const searchInput = document.getElementById('searchInput');
+                    const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
+                    if (searchTerm) {
+                        items = items.filter(item => 
+                            item.title && item.title.toLowerCase().includes(searchTerm)
+                        );
+                    }
+                    
+                    if (!items.length) {
+                        // Hide section if no items match search
+                        document.getElementById('recommended-section').style.display = 'none';
+                        return;
+                    }
 
                     const grid = document.getElementById('recommended-grid');
                     grid.innerHTML = items.map(cardHTML).join('');
@@ -581,6 +595,16 @@
             //Initial load - only on home page
             if (isHomeActive()) {
                 loadRecommendations();
+            }
+
+            // Reload recommendations when search input changes (for filtering)
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    if (isHomeActive()) {
+                        loadRecommendations();
+                    }
+                });
             }
 
             // Hide recommendations section when navigating away from home
