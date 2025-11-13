@@ -1,10 +1,10 @@
 const { Profile } = require('../models/profileModel');
 const { User } = require('../models/userModel');
+const { logError } = require('./logger');
+
 async function ensureAuth(req, res, next) {
-    console.log('[ensureAuth] Session check:', req.session?.user?.id ? 'User ID found' : 'No user ID');
     const userId = req.session?.user?.id;
     if (!userId) {
-        console.log('[ensureAuth] Authentication failed - no user ID in session');
         return res.status(401).json({ message: 'login required' });
     }
     try {
@@ -17,7 +17,7 @@ async function ensureAuth(req, res, next) {
         }
         return next();
     } catch (error) {
-        console.error('Error in ensureAuth middleware:', error);
+        logError('[Auth] Error in ensureAuth middleware', error, { userId });
         return res.status(500).json({ message: 'Server error during authentication.' });
     }
 }

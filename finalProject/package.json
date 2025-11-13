@@ -5,7 +5,10 @@
   "main": "application.js",
   "scripts": {
     "start": "node application.js",
-    "seed": "node src/utils/populateDB.js --force"
+    "seed": "node src/utils/populateDB.js --force",
+    "seed:reset": "node src/utils/populateDB.js --reset",
+    "dev": "node application.js",
+    "verify": "node verify-setup.js"
   },
   "keywords": [],
   "author": "",
