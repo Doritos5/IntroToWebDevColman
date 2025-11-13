@@ -6,6 +6,9 @@
 // - Random likes/ratings
 // - Poster URLs use picsum with seed = encoded title
 
+// Ensure .env is loaded
+try { require('dotenv').config(); } catch (_) {}
+
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const { Video, Series } = require('../models/catalogModel');
