@@ -3,6 +3,7 @@ dotenv.config();
 const path = require('path');
 const express = require('express');
 const session = require('express-session');
+const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo');
 
 if (!process.env.SESSION_SECRET) {
@@ -14,6 +15,8 @@ const catalogRoutes = require('./src/routes/catalogRoutes');
 const profileRoutes = require('./src/routes/profileRoutes');
 const likeRoutes = require('./src/routes/likeRoutes');
 const recommendationRoutes = require('./src/routes/recommendationRoutes');
+const analyticsRoutes = require('./src/routes/analyticsRoutes');
+
 const contentRoutes = require('./src/routes/contentRoutes');
 const { logger } = require("./src/middleware/logger");
 const { connectToDatabase } = require('./src/utils/db');
@@ -23,6 +26,8 @@ const PORT = process.env.PORT || 5555;
 
 
 const publicPath = path.join(__dirname, 'src', 'public')
+
+app.disable('x-powered-by');
 
 app.use(express.static(publicPath));
 app.use(express.json());
@@ -53,8 +58,32 @@ app.use('/', authRoutes);
 app.use('/catalog', catalogRoutes);
 app.use('/profiles', profileRoutes);
 app.use('/likes', likeRoutes);
+app.use('/settings/analytics', analyticsRoutes);
 app.use('/', contentRoutes);
 app.use('/api', recommendationRoutes);
+
+// 404 forwarder to centralized error handler
+app.use((req, res, next) => {
+    const err = new Error('Not Found');
+    err.status = 404;
+    next(err);
+});
+
+// Centralized error handler
+app.use((err, req, res, next) => {
+    const status = err.status || 500;
+    const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest' || req.accepts('json');
+    const isProd = process.env.NODE_ENV === 'production';
+    const body = isProd
+        ? { message: status === 404 ? 'Not found' : 'Internal server error' }
+        : { message: err.message || 'Error', stack: err.stack };
+
+    if (isAjax) {
+        res.status(status).json(body);
+    } else {
+        res.status(status).type('text/plain').send(body.message || 'Error');
+    }
+});
 
 async function startServer() {
     try {

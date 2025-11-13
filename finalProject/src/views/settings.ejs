@@ -1,12 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Settings - Profile Management</title>
+    <title><%= typeof title !== 'undefined' ? title : 'Configuration' %></title>
     <link rel="stylesheet" href="/settings/settings.css">
 </head>
 <body>
-
 <div class="settings-container">
         <% if (user && user.role === 'admin') { %>
             <div class="top-actions">
@@ -27,14 +26,14 @@
         <% if (profiles && profiles.length > 0) { %>
             <% profiles.forEach(profile => { %>
                 <li class="profile-item" data-profile-id="<%= profile.id %>">
-
                     <span class="profile-name"><%= profile.displayName %></span>
-
-                    <input type="text" class="profile-edit-input" value="<%= profile.displayName %>" style="display: none;">
-
+                    <input type="text" class="profile-edit-input"
+                           value="<%= profile.displayName %>" style="display:none;">
                     <div class="profile-buttons">
                         <button class="btn btn-secondary btn-sm btn-edit-profile" aria-label="Edit name">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
+                            <!-- icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                 fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
                                 <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V12h2.293z"/>
                             </svg>
                         </button>

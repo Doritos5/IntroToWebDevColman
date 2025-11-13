@@ -36,6 +36,21 @@
         .poster-preview { width: 180px; height: 100px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(255,255,255,.12); background:#0f0f0f; }
         .d-none-imp { display:none !important; }
 
+        /* Type selector styling */
+        .type-section { background:#0b0b0b; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:1rem; }
+        .btn-toggle-group .btn { 
+            background:#101010; 
+            border-color:#2a2a2a; 
+            color:#eaeaea; 
+            padding:.4rem .9rem; 
+            border-radius:999px; 
+            transition: all .15s ease;
+        }
+        .btn-toggle-group .btn:hover { background:#161616; border-color:#3a3a3a; color:#fff; }
+        .btn-check:checked + .btn { background:#1f1f1f; border-color:#6f6f6f; color:#fff; box-shadow: 0 0 0 2px rgba(255,255,255,.08) inset; }
+    .type-hint { color:#9da3a9; font-size:.8rem; }
+    .type-header { display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; }
+
     </style>
 </head>
 <body class="add-content-page">
@@ -58,7 +73,7 @@
                     <div class="row g-3">
                         <div class="col-sm-7">
                             <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
-                            <input id="title" name="title" type="text" class="form-control" required placeholder="Video title">
+                            <input id="title" name="title" type="text" class="form-control" required placeholder="Movie/Series title">
                         </div>
                         <div class="col-sm-2">
                             <label for="year" class="form-label">Year <span class="text-danger">*</span></label>
@@ -82,33 +97,25 @@
                         </div>
 
                         <div class="col-12">
-                            <fieldset class="border rounded-3 p-3">
-                                <legend class="float-none w-auto px-2 text-secondary small">Type</legend>
-                                <div class="row g-3 align-items-end">
-                                    <div class="col-auto">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="type" id="typeMovie" value="movie" checked>
-                                            <label class="form-check-label" for="typeMovie">Movie</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="type" id="typeSeries" value="series">
-                                            <label class="form-check-label" for="typeSeries">Series</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md d-none" id="seriesFields">
-                                        <div class="row g-3">
-                                            <div class="col-md">
-                                                <label for="seriesTitle" class="form-label">Series Title <span class="text-danger">*</span></label>
-                                                <input id="seriesTitle" name="seriesTitle" type="text" class="form-control" placeholder="Series name">
-                                            </div>
-                                            <div class="col-md-3">
-                                                <label for="episodeNumber" class="form-label">Episode # <span class="text-danger">*</span></label>
-                                                <input id="episodeNumber" name="episodeNumber" type="number" min="1" class="form-control" placeholder="1">
-                                            </div>
-                                        </div>
+                            <div class="type-section">
+                                <div class="type-header">
+                                    <span class="form-label mb-0">Type</span>
+                                    <div class="btn-group btn-toggle-group" role="group" aria-label="Content type">
+                                        <input class="btn-check" type="radio" name="type" id="typeMovie" value="movie" checked autocomplete="off">
+                                        <label class="btn" for="typeMovie">Movie</label>
+
+                                        <input class="btn-check" type="radio" name="type" id="typeSeries" value="series" autocomplete="off">
+                                        <label class="btn" for="typeSeries">Series</label>
                                     </div>
                                 </div>
-                            </fieldset>
+                                <div class="type-hint mt-2">For series, Title is the series name and Episode # is required.</div>
+                                <div class="row g-3 mt-2 align-items-end">
+                                    <div class="col-md-3 d-none" id="seriesFields" aria-live="polite">
+                                        <label for="episodeNumber" class="form-label">Episode # <span class="text-danger">*</span></label>
+                                        <input id="episodeNumber" name="episodeNumber" type="number" min="1" class="form-control" placeholder="1">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="col-12">
@@ -122,7 +129,7 @@
 
                         <div class="col-12 d-flex gap-2 mt-2">
                             <button type="submit" class="btn btn-danger">Add Content</button>
-                            <a href="/settings" class="btn btn-secondary">Back to settings</a>
+                            <a href="/settings/configuration" class="btn btn-secondary">Back to configuration</a>
                         </div>
                     </div>
                 </form>
@@ -135,6 +142,7 @@
             const typeMovie = document.getElementById('typeMovie');
             const typeSeries = document.getElementById('typeSeries');
             const seriesFields = document.getElementById('seriesFields');
+            const titleInput = document.getElementById('title');
             const posterInput = document.getElementById('poster');
             const posterPreview = document.getElementById('posterPreview');
             const dropzone = document.getElementById('dropzone');
@@ -144,17 +152,19 @@
             function updateSeriesVisibility(){
                 if (typeSeries.checked) {
                     seriesFields.classList.remove('d-none');
-                    document.getElementById('seriesTitle').setAttribute('required', 'required');
                     document.getElementById('episodeNumber').setAttribute('required', 'required');
                 } else {
                     seriesFields.classList.add('d-none');
-                    const st = document.getElementById('seriesTitle');
                     const ep = document.getElementById('episodeNumber');
-                    if (st) st.value = '';
                     if (ep) ep.value = '';
-                    if (st) st.removeAttribute('required');
                     if (ep) ep.removeAttribute('required');
                 }
+                updateTitlePlaceholder();
+            }
+
+            function updateTitlePlaceholder(){
+                if (!titleInput) return;
+                titleInput.placeholder = 'Movie/Series title';
             }
             typeMovie.addEventListener('change', updateSeriesVisibility);
             typeSeries.addEventListener('change', updateSeriesVisibility);

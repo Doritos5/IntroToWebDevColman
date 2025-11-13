@@ -92,7 +92,7 @@ exports.getRecommendations = async function getRecommendations(req, res) {
       const g = Array.isArray(v.genres) ? v.genres : [];
       let score = 0;
 
-      // Count how many genres match liked and watched series
+      // Liked genres are stronger than watched (3 pts vs 2 pts)
       const likedHits = g.filter(x => likedSet.has(x)).length;   
       const watchedHits = g.filter(x => watchedSet.has(x)).length; 
 

@@ -358,6 +358,13 @@ body.item-page {
     color: rgba(255, 255, 255, 0.75);
 }
 
+.item-episode {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-left: 0.75rem;
+    color: rgba(255, 255, 255, 0.75);
+}
+
 .item-genres .badge {
     font-size: 0.75rem;
     background: rgba(255, 255, 255, 0.15);

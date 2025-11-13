@@ -2,3 +2,8 @@
 **/node_modules/
 **/package-lock.json
 backup
+# Ignore environment files
+.env
+**/.env
+**/*.env
+finalProject/.env
